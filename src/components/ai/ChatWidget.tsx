@@ -8,6 +8,14 @@ import {
   MessageCircle, Square, Play, PhoneOff
 } from 'lucide-react';
 
+// ─────────────────────────────────────────────
+// Detect mobile/iOS at module level (SSR-safe)
+// ─────────────────────────────────────────────
+function detectMobile(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+}
+
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeMode, setActiveMode] = useState<'text' | 'voice'>('text');
@@ -29,6 +37,8 @@ export function ChatWidget() {
   const shouldRestartRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrlRef = useRef<string | null>(null); // track objectURL for cleanup
+  const isMobileRef = useRef(false);
+  const voicesReadyRef = useRef(false);
 
   // Stable refs — avoid stale closures
   const activeModeRef = useRef<'text' | 'voice'>('text');
@@ -42,6 +52,11 @@ export function ChatWidget() {
   useEffect(() => { isSpeakingRef.current = isSpeaking; }, [isSpeaking]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { voiceStatusRef.current = voiceStatus; }, [voiceStatus]);
+
+  // Detect mobile once on mount
+  useEffect(() => {
+    isMobileRef.current = detectMobile();
+  }, []);
 
   useEffect(() => {
     if (activeMode === 'text') messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -124,7 +139,7 @@ export function ChatWidget() {
   }, []);
 
   // ─────────────────────────────────────────────
-  // WEB SPEECH API FALLBACK TTS
+  // WEB SPEECH API TTS (desktop primary, mobile fallback)
   // ─────────────────────────────────────────────
 
   const trySpeak = useCallback((text: string) => {
@@ -140,7 +155,7 @@ export function ChatWidget() {
     utterance.pitch = 0.88;
     utterance.volume = 1.0;
 
-    // Best French voice priority: macOS male → Chrome male → any French
+    // Use cached voices (populated by voiceschanged listener)
     const voices = window.speechSynthesis.getVoices();
     const preferredNames = ['Edouard', 'Thomas', 'Google français', 'Microsoft Paul'];
     let bestVoice = null;
@@ -196,7 +211,7 @@ export function ChatWidget() {
   }, [restartMic]);
 
   // ─────────────────────────────────────────────
-  // GEMINI TTS — primary (Charon male voice)
+  // GEMINI TTS — primary on mobile (Charon male voice)
   // ─────────────────────────────────────────────
 
   const playGeminiTTS = useCallback(async (text: string) => {
@@ -204,6 +219,7 @@ export function ChatWidget() {
     if (!clean) return;
 
     setIsSpeaking(true);
+    isSpeakingRef.current = true;
     setVoiceStatus('speaking');
     setShowReplay(false);
     freeAudioUrl();
@@ -228,16 +244,15 @@ export function ChatWidget() {
       audio.onended = () => {
         freeAudioUrl();
         setIsSpeaking(false);
-        isSpeakingRef.current = false; // sync ref immediately (don't wait for useEffect)
+        isSpeakingRef.current = false;
         pendingTTSTextRef.current = null;
         setShowReplay(false);
-        // Always try to restart mic after TTS finishes
         setTimeout(restartMic, 500);
       };
       audio.onerror = () => {
         freeAudioUrl();
         setIsSpeaking(false);
-        isSpeakingRef.current = false; // sync immediately
+        isSpeakingRef.current = false;
         console.warn('Audio element error, falling back to Web Speech API');
         trySpeak(clean);
       };
@@ -247,11 +262,30 @@ export function ChatWidget() {
       console.warn('Gemini TTS failed, falling back to Web Speech API:', err);
       freeAudioUrl();
       setIsSpeaking(false);
-      isSpeakingRef.current = false; // sync immediately
+      isSpeakingRef.current = false;
       pendingTTSTextRef.current = text;
       trySpeak(clean); // fallback
     }
   }, [freeAudioUrl, restartMic, trySpeak]);
+
+  // ─────────────────────────────────────────────
+  // SPEAK — unified dispatcher (picks best TTS per platform)
+  // Desktop: Web Speech API (zero latency) → fallback Gemini TTS on watchdog timeout
+  // Mobile:  Gemini TTS via <audio> (works from useEffect) → fallback Web Speech + Replay button
+  // ─────────────────────────────────────────────
+
+  const speakResponse = useCallback((text: string) => {
+    if (isMobileRef.current) {
+      // Mobile: Gemini TTS is reliable from non-gesture context because
+      // the <audio> element was unlocked in startVoiceMode() user gesture.
+      // Web Speech speak() from useEffect is blocked on iOS — skip it.
+      playGeminiTTS(text);
+    } else {
+      // Desktop: Web Speech API — instant, no network latency.
+      // trySpeak has a 2.5s watchdog that shows a Replay button if it fails.
+      trySpeak(text);
+    }
+  }, [playGeminiTTS, trySpeak]);
 
   // When AI response arrives in voice mode → speak it
   useEffect(() => {
@@ -266,7 +300,7 @@ export function ChatWidget() {
       lastSpokenIndexRef.current = assistantMessages.length - 1;
       setVoiceResponse(lastMsg.content);
       setVoiceStatus('speaking');
-      trySpeak(lastMsg.content); // Web Speech API — zero latency (Gemini TTS too slow)
+      speakResponse(lastMsg.content);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isLoading, activeMode]);
@@ -324,7 +358,11 @@ export function ChatWidget() {
         setVoiceStatus('idle');
         alert('Accès au microphone refusé. Autorisez le micro dans les paramètres du navigateur.');
       } else if (err === 'no-speech') {
+        // On mobile, no-speech fires fast → restart mic to keep listening
         setIsRecording(false);
+        if (shouldRestartRef.current && activeModeRef.current === 'voice') {
+          setTimeout(() => restartMic(), 300);
+        }
       } else if (err !== 'aborted') {
         console.error('Mic error:', err);
         setIsRecording(false);
@@ -348,7 +386,15 @@ export function ChatWidget() {
 
     speechRecognitionRef.current = recognition;
 
-    if (window.speechSynthesis) window.speechSynthesis.getVoices();
+    // ── Load voices properly (critical for mobile) ──
+    if (window.speechSynthesis) {
+      const loadVoices = () => {
+        const v = window.speechSynthesis.getVoices();
+        if (v.length > 0) voicesReadyRef.current = true;
+      };
+      loadVoices(); // immediate attempt (works on some browsers)
+      window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─────────────────────────────────────────────
@@ -360,11 +406,26 @@ export function ChatWidget() {
     if (isRecordingRef.current) return;
     unlockTTS();
 
-    // Unlock <audio> element for iOS (silent play → pause)
+    // Unlock <audio> element for iOS — MUST happen in user gesture.
+    // Play a tiny silent WAV so the browser marks the element as "user-activated".
+    // This allows subsequent programmatic .play() calls from useEffect/async code.
     if (audioRef.current) {
       const a = audioRef.current;
-      a.src = '';
-      a.play().then(() => { a.pause(); }).catch(() => {});
+      // Minimal valid WAV: 44 bytes header + 2 bytes silence (1 sample)
+      const silentWav = new Uint8Array([
+        0x52,0x49,0x46,0x46, 0x26,0x00,0x00,0x00, 0x57,0x41,0x56,0x45,
+        0x66,0x6D,0x74,0x20, 0x10,0x00,0x00,0x00, 0x01,0x00,0x01,0x00,
+        0x80,0x3E,0x00,0x00, 0x00,0x7D,0x00,0x00, 0x02,0x00,0x10,0x00,
+        0x64,0x61,0x74,0x61, 0x02,0x00,0x00,0x00, 0x00,0x00
+      ]);
+      const silentBlob = new Blob([silentWav], { type: 'audio/wav' });
+      const silentUrl = URL.createObjectURL(silentBlob);
+      a.src = silentUrl;
+      a.play().then(() => {
+        URL.revokeObjectURL(silentUrl);
+      }).catch(() => {
+        URL.revokeObjectURL(silentUrl);
+      });
     }
 
     shouldRestartRef.current = true;
@@ -462,8 +523,8 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* Hidden audio element for Gemini TTS */}
-      <audio ref={audioRef} className="hidden" />
+      {/* Hidden audio element for Gemini TTS — playsInline prevents iOS fullscreen */}
+      <audio ref={audioRef} playsInline className="hidden" />
 
       {/* Floating trigger */}
       <motion.button
