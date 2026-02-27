@@ -44,18 +44,15 @@ export function Header() {
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="relative z-10 flex items-center gap-3 group">
+          <Link href="/" className="relative z-10 flex items-center group">
             <Image
-              src="/logo.png"
+              src="/logo-flame.png"
               alt="Logo Tikoun Aolam"
               width={44}
-              height={44}
+              height={53}
               className="object-contain drop-shadow-[0_0_6px_rgba(212,175,55,0.4)] group-hover:drop-shadow-[0_0_10px_rgba(212,175,55,0.7)] transition-all"
               priority
             />
-            <span className="font-cinzel text-xl font-bold tracking-[0.2em] text-tikoun-white uppercase">
-              Tikoun <span className="text-tikoun-gold">Aolam</span>
-            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -166,7 +163,7 @@ export function Header() {
               <Link href="/" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-tikoun-gold">Accueil</Link>
               <div className="space-y-3">
                 <span className="text-sm text-tikoun-white/50 uppercase tracking-widest">Nos Livres</span>
-                <div className="grid grid-cols-2 gap-3 pl-4 border-l border-tikoun-white/10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-4 border-l border-tikoun-white/10">
                   {BOOK_CATEGORIES.map((cat) => (
                     <Link key={cat.name} href={cat.href} onClick={() => setMobileMenuOpen(false)} className="text-sm hover:text-tikoun-gold">{cat.name}</Link>
                   ))}
@@ -175,6 +172,20 @@ export function Header() {
               <Link href="/blog" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-tikoun-gold">Notre Blog</Link>
               <Link href="/editions" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-tikoun-gold">Nos Éditions</Link>
               <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-tikoun-gold">Contact</Link>
+
+              {/* Mobile currency selector */}
+              <div className="pt-4 border-t border-tikoun-white/10 flex items-center gap-3">
+                <span className="text-sm text-tikoun-white/50 uppercase tracking-widest">Devise</span>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as "ILS" | "EUR" | "USD")}
+                  className="bg-tikoun-white/5 border border-tikoun-white/10 rounded-lg px-4 py-2 text-sm text-tikoun-white appearance-none outline-none cursor-pointer"
+                >
+                  <option value="ILS" className="bg-tikoun-black text-tikoun-white">ILS ₪</option>
+                  <option value="EUR" className="bg-tikoun-black text-tikoun-white">EUR €</option>
+                  <option value="USD" className="bg-tikoun-black text-tikoun-white">USD $</option>
+                </select>
+              </div>
             </nav>
           </motion.div>
         )}
