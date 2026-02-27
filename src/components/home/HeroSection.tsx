@@ -7,12 +7,13 @@ import { ArrowRight } from "lucide-react";
 export function HeroSection() {
   return (
     <section className="relative h-screen min-h-[600px] md:min-h-[800px] w-full flex items-center justify-center overflow-hidden bg-tikoun-black">
-      {/* Background with slow zoom effect */}
+      {/* Background with slow zoom effect (desktop only — disabled on mobile to prevent jitter) */}
       <motion.div
         className="absolute inset-0 z-0"
-        initial={{ scale: 1.1 }}
-        animate={{ scale: 1 }}
-        transition={{ duration: 20, ease: "linear", repeat: Infinity, repeatType: "mirror" }}
+        initial={{ scale: 1 }}
+        animate={{ scale: [1, 1.1, 1] }}
+        transition={{ duration: 40, ease: "linear", repeat: Infinity }}
+        style={{ willChange: "transform", backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
       >
         <div className="absolute inset-0 bg-tikoun-black/70 z-10" />
         {/* Static photo base */}
@@ -26,7 +27,7 @@ export function HeroSection() {
           muted
           loop
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-contain object-top md:object-cover md:object-center"
           style={{ opacity: 0.25, zIndex: 5 }}
         >
           <source src="/videos/hero-cinematic.mp4" type="video/mp4" />
