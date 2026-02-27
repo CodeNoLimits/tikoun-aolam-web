@@ -6,65 +6,79 @@ import { Volume2, VolumeX } from "lucide-react";
 export function AudioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
+
+  // Tracks whether the user manually stopped music (don't auto-resume in that case)
+  const manuallyStoppedRef = useRef(false);
 
   useEffect(() => {
-    // Set a very soft, ambient volume
-    if (audioRef.current) {
-      audioRef.current.volume = 0.15;
-    }
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.volume = 0.15;
 
-    // Attempt to auto-play ONLY when the user first interacts with the site
-    // This respects browser autoplay policies while fulfilling the user's request.
-    const handleFirstInteraction = () => {
-      if (!hasInteracted && audioRef.current) {
-        audioRef.current.play().then(() => {
-          setIsPlaying(true);
-          setHasInteracted(true);
-        }).catch((err) => {
-          console.log("Autoplay blocked by browser:", err);
-        });
+    // Try immediate autoplay
+    audio.play()
+      .then(() => setIsPlaying(true))
+      .catch(() => {
+        const start = () => {
+          audio.play().then(() => setIsPlaying(true)).catch(() => {});
+        };
+        window.addEventListener('click', start, { once: true });
+        window.addEventListener('touchstart', start, { once: true });
+        window.addEventListener('keydown', start, { once: true });
+      });
+
+    // Pause music when mic is activated (custom event from ChatWidget)
+    const handleMicStart = () => {
+      if (audio && !audio.paused) {
+        audio.pause();
+        setIsPlaying(false);
+        // Don't mark as manually stopped — auto-resume when conversation ends
       }
     };
 
-    window.addEventListener('click', handleFirstInteraction, { once: true });
-    window.addEventListener('keydown', handleFirstInteraction, { once: true });
-    window.addEventListener('scroll', handleFirstInteraction, { once: true });
+    // Resume music when conversation ends (if user hadn't manually stopped it)
+    const handleMicEnd = () => {
+      if (audio && audio.paused && !manuallyStoppedRef.current) {
+        audio.play().then(() => setIsPlaying(true)).catch(() => {});
+      }
+    };
+
+    window.addEventListener('tikoun:mic-start', handleMicStart);
+    window.addEventListener('tikoun:mic-end', handleMicEnd);
 
     return () => {
-      window.removeEventListener('click', handleFirstInteraction);
-      window.removeEventListener('keydown', handleFirstInteraction);
-      window.removeEventListener('scroll', handleFirstInteraction);
+      window.removeEventListener('tikoun:mic-start', handleMicStart);
+      window.removeEventListener('tikoun:mic-end', handleMicEnd);
     };
-  }, [hasInteracted]);
+  }, []);
 
-  const toggleMute = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsPlaying(true);
-        setHasInteracted(true); // Manually playing counts as interaction
-      }
+  const toggle = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      manuallyStoppedRef.current = true; // User chose to stop → no auto-resume
+    } else {
+      audio.play().then(() => setIsPlaying(true)).catch(() => {});
+      manuallyStoppedRef.current = false;
     }
   };
 
   return (
     <>
-      <audio
-        ref={audioRef}
-        src="/audio/background-music.mp3"
-        loop
-        preload="auto"
-      />
+      <audio ref={audioRef} src="/audio/background-music.mp3" loop preload="auto" />
+      {/* Positioned just above the chat widget button (bottom-24) */}
       <button
-        onClick={toggleMute}
-        className="fixed bottom-6 left-6 z-50 w-12 h-12 rounded-full bg-tikoun-black/80 backdrop-blur-md border border-tikoun-gold/30 text-tikoun-gold flex items-center justify-center hover:bg-tikoun-gold hover:text-tikoun-black transition-all shadow-[0_0_15px_rgba(212,175,55,0.2)]"
-        aria-label={isPlaying ? "Désactiver la musique" : "Activer la musique"}
+        onClick={toggle}
+        className="fixed bottom-40 right-5 md:right-8 z-[89] w-11 h-11 rounded-full bg-tikoun-black/80 backdrop-blur-md border border-tikoun-gold/30 text-tikoun-gold flex items-center justify-center hover:bg-tikoun-gold hover:text-tikoun-black transition-all shadow-lg shadow-tikoun-black/40"
+        aria-label={isPlaying ? "Couper la musique" : "Activer la musique"}
+        title={isPlaying ? "Musique : ON" : "Musique : OFF"}
       >
-        {isPlaying ? <Volume2 className="w-5 h-5 animate-pulse" /> : <VolumeX className="w-5 h-5 opacity-60" />}
+        {isPlaying
+          ? <Volume2 className="w-4 h-4 animate-pulse" />
+          : <VolumeX className="w-4 h-4 opacity-50" />
+        }
       </button>
     </>
   );

@@ -1,9 +1,9 @@
 "use client";
 
 import { useChat } from 'ai/react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Sparkles, Mic, Volume2, MicOff, MessageCircle, Square, Play } from 'lucide-react';
+import { MessageSquare, X, Send, Sparkles, Mic, Volume2, MicOff, MessageCircle, Square, Play, PhoneOff } from 'lucide-react';
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,29 +18,30 @@ export function ChatWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const speechRecognitionRef = useRef<any>(null);
   const lastSpokenIndexRef = useRef<number>(-1);
+  // TTS unlock: set to true as soon as speak() is called in a user gesture (not just onend)
   const ttsUnlockedRef = useRef(false);
   const pendingTTSRef = useRef<string | null>(null);
+  const activeModeRef = useRef(activeMode);
+  const isRecordingRef = useRef(isRecording);
+  const messagesRef = useRef(messages);
 
-  // Stable refs for handlers (prevent infinite re-render)
+  // Stable refs for handlers (infinite re-render fix)
   const handleSubmitRef = useRef(handleSubmit);
   const handleInputChangeRef = useRef(handleInputChange);
-  useEffect(() => {
-    handleSubmitRef.current = handleSubmit;
-    handleInputChangeRef.current = handleInputChange;
-  });
+  useEffect(() => { handleSubmitRef.current = handleSubmit; });
+  useEffect(() => { handleInputChangeRef.current = handleInputChange; });
+  useEffect(() => { activeModeRef.current = activeMode; }, [activeMode]);
+  useEffect(() => { isRecordingRef.current = isRecording; }, [isRecording]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   // Auto-scroll in text mode
   useEffect(() => {
-    if (activeMode === 'text') {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (activeMode === 'text') messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, activeMode, isOpen]);
 
   // Track voice status based on loading
   useEffect(() => {
-    if (activeMode === 'voice' && isLoading) {
-      setVoiceStatus('thinking');
-    }
+    if (activeMode === 'voice' && isLoading) setVoiceStatus('thinking');
   }, [isLoading, activeMode]);
 
   // When AI response arrives in voice mode → show text + play TTS
@@ -56,87 +57,112 @@ export function ChatWidget() {
       lastSpokenIndexRef.current = assistantMessages.length - 1;
       setVoiceResponse(lastMsg.content);
       setVoiceStatus('speaking');
-
-      // Try TTS — if already unlocked (user gesture on mic button) it will work
-      // If not (first load), it falls back to showing text only
       trySpeak(lastMsg.content);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isLoading, activeMode]);
 
-  // Clean markdown for TTS
-  const cleanForTTS = (text: string) => {
-    return text
+  const cleanForTTS = (text: string) =>
+    text
       .replace(/\*\*/g, '')
       .replace(/\*/g, '')
       .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
       .replace(/#+ /g, '')
-      .replace(/`[^`]+`/g, '');
-  };
+      .replace(/`[^`]+`/g, '')
+      .trim();
 
-  const stopSpeaking = () => {
+  const stopSpeaking = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     setIsSpeaking(false);
     setVoiceStatus('idle');
-  };
+  }, []);
 
-  const trySpeak = (text: string) => {
+  // Auto-restart mic after TTS finishes (continuous conversation)
+  const restartMic = useCallback(() => {
+    const recognition = speechRecognitionRef.current;
+    if (!recognition || activeModeRef.current !== 'voice' || isRecordingRef.current) return;
+    setVoiceTranscript('');
+    // Sync lastSpoken with current messages
+    lastSpokenIndexRef.current = messagesRef.current.filter(m => m.role === 'assistant').length - 1;
+    try {
+      recognition.start();
+      setIsRecording(true);
+      setVoiceStatus('listening');
+    } catch {
+      // recognition already running or not available
+    }
+  }, []);
+
+  // Core TTS function — does NOT call cancel() to preserve iOS unlock
+  const trySpeak = useCallback((text: string) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
 
-    window.speechSynthesis.cancel();
-
     const clean = cleanForTTS(text);
+    if (!clean) return;
+
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.lang = 'fr-FR';
-    utterance.rate = 0.92;
-    utterance.pitch = 0.85;
+    utterance.rate = 0.9;
+    utterance.pitch = 0.88;
     utterance.volume = 1.0;
 
-    // Pick a French voice (prefer masculine)
-    const getVoiceAndSpeak = () => {
+    const doSpeak = () => {
       const voices = window.speechSynthesis.getVoices();
-      const frVoice =
-        voices.find(v => v.lang.startsWith('fr') && /thomas|male|homme/i.test(v.name)) ||
-        voices.find(v => v.lang.startsWith('fr') && !/female|femme/i.test(v.name)) ||
-        voices.find(v => v.lang.startsWith('fr'));
+      // Prefer French voice, any gender
+      const frVoice = voices.find(v => v.lang.startsWith('fr')) || voices[0];
       if (frVoice) utterance.voice = frVoice;
 
       utterance.onstart = () => { setIsSpeaking(true); setVoiceStatus('speaking'); };
-      utterance.onend = () => { setIsSpeaking(false); setVoiceStatus('idle'); };
-      utterance.onerror = () => {
-        // TTS blocked (iOS autoplay policy) — just show text, don't crash
+      utterance.onend = () => {
         setIsSpeaking(false);
         setVoiceStatus('idle');
-        pendingTTSRef.current = text; // User can click Play to hear it
+        pendingTTSRef.current = null;
+        // Auto-restart mic → continuous conversation
+        setTimeout(restartMic, 700);
+      };
+      utterance.onerror = (e) => {
+        // On iOS: 'not-allowed' → user must tap Réécouter
+        // On desktop: log and retry once
+        console.warn('TTS error:', e.error);
+        setIsSpeaking(false);
+        setVoiceStatus('idle');
+        pendingTTSRef.current = text; // Shows Réécouter button
       };
 
       window.speechSynthesis.speak(utterance);
     };
 
-    // If voices already loaded
-    if (window.speechSynthesis.getVoices().length > 0) {
-      getVoiceAndSpeak();
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      doSpeak();
     } else {
-      // Wait for voices to load (some browsers async)
-      window.speechSynthesis.onvoiceschanged = () => { getVoiceAndSpeak(); };
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.onvoiceschanged = null;
+        doSpeak();
+      };
     }
-  };
+  }, [restartMic]);
 
-  // Called on mic button click (user gesture) → unlocks iOS TTS for this session
-  const unlockTTS = () => {
-    if (typeof window === 'undefined' || !window.speechSynthesis || ttsUnlockedRef.current) return;
-    const silent = new SpeechSynthesisUtterance(' ');
+  // Called on mic button click (user gesture) — unlocks iOS TTS for the session
+  const unlockTTS = useCallback(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (ttsUnlockedRef.current) return;
+
+    // Mark as unlocked immediately (not waiting for onend — avoid race with cancel)
+    ttsUnlockedRef.current = true;
+    const silent = new SpeechSynthesisUtterance('\u200B'); // zero-width space
     silent.volume = 0;
-    silent.onend = () => { ttsUnlockedRef.current = true; };
+    silent.rate = 10;
     window.speechSynthesis.speak(silent);
-  };
+  }, []);
 
-  // Initialize Speech Recognition — run once
+  // Init Speech Recognition — run once
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
     const recognition = new SpeechRecognition();
@@ -149,7 +175,6 @@ export function ChatWidget() {
       setVoiceTranscript(transcript);
       setVoiceStatus('thinking');
       setIsRecording(false);
-
       handleInputChangeRef.current({ target: { value: transcript } } as any);
       setTimeout(() => {
         handleSubmitRef.current({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>);
@@ -162,14 +187,12 @@ export function ChatWidget() {
       setVoiceStatus('idle');
     };
 
-    recognition.onend = () => { setIsRecording(false); };
+    recognition.onend = () => setIsRecording(false);
 
     speechRecognitionRef.current = recognition;
 
     // Pre-load voices
-    if (window.speechSynthesis) {
-      window.speechSynthesis.getVoices();
-    }
+    if (window.speechSynthesis) window.speechSynthesis.getVoices();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleRecording = () => {
@@ -179,6 +202,9 @@ export function ChatWidget() {
       return;
     }
 
+    // If TTS is speaking, stop it first
+    if (isSpeaking) stopSpeaking();
+
     // Unlock TTS during this user gesture (critical for iOS Safari)
     unlockTTS();
 
@@ -187,23 +213,46 @@ export function ChatWidget() {
       setIsRecording(false);
       setVoiceStatus('idle');
     } else {
-      stopSpeaking();
+      // Pause music while mic is active
+      window.dispatchEvent(new Event('tikoun:mic-start'));
+
       setVoiceTranscript('');
       setVoiceResponse('');
       pendingTTSRef.current = null;
       lastSpokenIndexRef.current = messages.filter(m => m.role === 'assistant').length - 1;
-      recognition.start();
-      setIsRecording(true);
-      setVoiceStatus('listening');
+      try {
+        recognition.start();
+        setIsRecording(true);
+        setVoiceStatus('listening');
+      } catch {
+        // might already be started
+      }
     }
   };
 
-  // "Play" button: replays last response (triggered by user gesture → iOS compatible)
+  // End the voice conversation — stops everything and resumes music
+  const endConversation = () => {
+    const recognition = speechRecognitionRef.current;
+    if (recognition && isRecording) {
+      try { recognition.stop(); } catch { /* ignore */ }
+    }
+    stopSpeaking();
+    setIsRecording(false);
+    setVoiceStatus('idle');
+    setVoiceTranscript('');
+    setVoiceResponse('');
+    pendingTTSRef.current = null;
+    // Resume music (if user hadn't manually stopped it)
+    window.dispatchEvent(new Event('tikoun:mic-end'));
+  };
+
+  // Réécouter — explicit user gesture → works on iOS
   const replayLastResponse = () => {
     const text = pendingTTSRef.current || voiceResponse;
     if (!text) return;
     unlockTTS();
-    setTimeout(() => trySpeak(text), 100);
+    // Give iOS a tick to register the gesture
+    setTimeout(() => trySpeak(text), 80);
   };
 
   const statusLabel = {
@@ -215,7 +264,7 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* Floating trigger button */}
+      {/* Floating trigger */}
       <motion.button
         onClick={() => setIsOpen(true)}
         initial={{ scale: 0, opacity: 0 }}
@@ -294,7 +343,7 @@ export function ChatWidget() {
                       {messages.length === 0 && (
                         <div className="text-center text-tikoun-white/50 text-sm mt-6 space-y-4 px-4">
                           <p>Shalom ! Je suis l&apos;assistant spirituel et conseiller de Tikoun Aolam.</p>
-                          <p className="text-xs">Je connais tout notre catalogue (&quot;Otsar Hayira&quot;, &quot;Likouté Moharan&quot;, nos Sidourim...). Comment puis-je vous aider aujourd&apos;hui ?</p>
+                          <p className="text-xs">Je connais tout notre catalogue (&quot;Otsar Hayira&quot;, &quot;Likouté Moharan&quot;, nos Sidourim...). Comment puis-je vous aider ?</p>
                         </div>
                       )}
                       {messages.map(m => (
@@ -352,14 +401,13 @@ export function ChatWidget() {
                     exit={{ opacity: 0, x: 20 }}
                     className="absolute inset-0 flex flex-col items-center justify-between p-5 overflow-y-auto"
                   >
-                    {/* Status label */}
+                    {/* Status */}
                     <p className="text-xs text-tikoun-white/50 uppercase tracking-widest text-center pt-2">
                       {statusLabel}
                     </p>
 
                     {/* Conversation bubbles */}
                     <div className="w-full flex-1 flex flex-col justify-center gap-3 py-4">
-                      {/* User transcript */}
                       {voiceTranscript ? (
                         <div className="flex justify-end">
                           <div className="max-w-[85%] bg-tikoun-white/10 text-tikoun-white rounded-2xl rounded-br-sm px-4 py-2.5 text-sm">
@@ -368,7 +416,6 @@ export function ChatWidget() {
                         </div>
                       ) : null}
 
-                      {/* AI thinking indicator */}
                       {voiceStatus === 'thinking' && (
                         <div className="flex justify-start">
                           <div className="bg-tikoun-copper/10 border border-tikoun-copper/20 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1">
@@ -379,7 +426,6 @@ export function ChatWidget() {
                         </div>
                       )}
 
-                      {/* AI response text */}
                       {voiceResponse && voiceStatus !== 'thinking' ? (
                         <div className="flex justify-start">
                           <div className="max-w-[85%] bg-gradient-to-br from-tikoun-copper/20 to-tikoun-black border border-tikoun-copper/30 text-tikoun-white rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm leading-relaxed">
@@ -393,10 +439,9 @@ export function ChatWidget() {
                       ) : null}
                     </div>
 
-                    {/* Mic button area */}
+                    {/* Mic button */}
                     <div className="flex flex-col items-center gap-4 pb-2">
                       <div className="relative">
-                        {/* Pulse rings when active */}
                         {(isRecording || isSpeaking) && (
                           <>
                             <motion.div
@@ -430,7 +475,6 @@ export function ChatWidget() {
                         </button>
                       </div>
 
-                      {/* Controls row */}
                       <div className="flex items-center gap-3">
                         {isSpeaking && (
                           <button
@@ -440,8 +484,8 @@ export function ChatWidget() {
                             <Square className="w-3 h-3" /> Arrêter
                           </button>
                         )}
-                        {/* Play button: lets user replay response via user gesture (iOS fix) */}
-                        {voiceResponse && !isSpeaking && !isRecording && (
+                        {/* Réécouter: iOS fallback (user gesture → TTS plays) */}
+                        {voiceResponse && !isSpeaking && !isRecording && pendingTTSRef.current && (
                           <button
                             onClick={replayLastResponse}
                             className="flex items-center gap-1.5 px-4 py-1.5 bg-tikoun-copper/20 border border-tikoun-copper/40 rounded-full text-tikoun-gold text-xs uppercase tracking-widest hover:bg-tikoun-copper/30 transition-colors"
@@ -450,6 +494,15 @@ export function ChatWidget() {
                           </button>
                         )}
                       </div>
+
+                      {/* End conversation button */}
+                      <button
+                        onClick={endConversation}
+                        className="flex items-center gap-2 px-5 py-2 bg-tikoun-white/5 border border-tikoun-white/15 rounded-full text-tikoun-white/50 text-xs hover:bg-tikoun-white/10 hover:text-tikoun-white/80 transition-colors"
+                      >
+                        <PhoneOff className="w-3.5 h-3.5" />
+                        Terminer la conversation
+                      </button>
 
                       <p className="text-[10px] text-tikoun-white/30 uppercase tracking-widest">
                         Propulsé par Google Gemini 2.5

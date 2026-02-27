@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Facebook, Instagram, Youtube, Send } from "lucide-react";
 
 export function Footer() {
@@ -10,8 +11,17 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
           {/* Brand Column */}
           <div className="space-y-6">
-            <Link href="/" className="font-serif text-3xl font-bold tracking-widest uppercase">
-              Tikoun <span className="text-tikoun-gold">Aolam</span>
+            <Link href="/" className="flex items-center gap-3 group">
+              <Image
+                src="/logo.png"
+                alt="Logo Tikoun Aolam"
+                width={48}
+                height={48}
+                className="object-contain drop-shadow-[0_0_8px_rgba(212,175,55,0.35)] group-hover:drop-shadow-[0_0_14px_rgba(212,175,55,0.6)] transition-all"
+              />
+              <span className="font-cinzel text-2xl font-bold tracking-widest uppercase">
+                Tikoun <span className="text-tikoun-gold">Aolam</span>
+              </span>
             </Link>
             <p className="text-tikoun-white/60 text-sm leading-relaxed max-w-xs">
               Éditeur de référence des enseignements de Rabbi Na'hman de Breslev et Rabbi Israël Ber Odesser, avec une traduction française de la plus haute qualité.
