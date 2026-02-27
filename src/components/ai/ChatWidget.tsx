@@ -151,8 +151,30 @@ export function ChatWidget() {
     if (!bestVoice) bestVoice = voices.find(v => v.lang.startsWith('fr')) ?? null;
     if (bestVoice) utterance.voice = bestVoice;
 
-    utterance.onstart = () => { setIsSpeaking(true); setVoiceStatus('speaking'); };
+    // Watchdog: iOS blocks speak() silently — onstart never fires → loop dies
+    // If onstart hasn't fired in 2.5s, rescue the conversation loop
+    let started = false;
+    const watchdog = setTimeout(() => {
+      if (!started) {
+        isSpeakingRef.current = false;
+        setIsSpeaking(false);
+        setVoiceStatus('idle');
+        pendingTTSTextRef.current = text;
+        setShowReplay(true);
+        setTimeout(restartMic, 500);
+      }
+    }, 2500);
+
+    utterance.onstart = () => {
+      started = true;
+      clearTimeout(watchdog);
+      setIsSpeaking(true);
+      setVoiceStatus('speaking');
+      setShowReplay(false);
+    };
     utterance.onend = () => {
+      started = true;
+      clearTimeout(watchdog);
       setIsSpeaking(false);
       isSpeakingRef.current = false; // sync ref immediately
       setVoiceStatus('idle');
@@ -160,7 +182,10 @@ export function ChatWidget() {
       setTimeout(restartMic, 500);
     };
     utterance.onerror = () => {
+      started = true;
+      clearTimeout(watchdog);
       setIsSpeaking(false);
+      isSpeakingRef.current = false; // sync ref immediately — prevents stale ref blocking restartMic
       setVoiceStatus('idle');
       pendingTTSTextRef.current = text;
       setShowReplay(true);

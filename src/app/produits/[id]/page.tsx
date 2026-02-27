@@ -92,7 +92,7 @@ function ProductContent({ product }: { product: Product }) {
       <div className="container mx-auto px-4 md:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
           {/* Left: Gallery */}
-          <div className="flex flex-col-reverse md:flex-row gap-4 h-fit sticky top-32">
+          <div className="flex flex-col-reverse md:flex-row gap-4 h-fit md:sticky md:top-32">
             {/* Thumbnails */}
             <div className="flex md:flex-col gap-4 overflow-x-auto md:overflow-y-auto scrollbar-hide py-2 md:py-0 w-full md:w-24">
               {images.map((img, idx) => {
