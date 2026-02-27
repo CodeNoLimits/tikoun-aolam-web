@@ -43,8 +43,8 @@ export function Header() {
     >
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="relative z-10 flex items-center group">
+          {/* Logo: flame only on mobile, flame + text on desktop */}
+          <Link href="/" className="relative z-10 flex items-center gap-3 group">
             <Image
               src="/logo-flame.png"
               alt="Logo Tikoun Aolam"
@@ -53,6 +53,9 @@ export function Header() {
               className="object-contain drop-shadow-[0_0_6px_rgba(212,175,55,0.4)] group-hover:drop-shadow-[0_0_10px_rgba(212,175,55,0.7)] transition-all"
               priority
             />
+            <span className="hidden lg:inline font-cinzel text-xl font-bold tracking-[0.25em] uppercase group-hover:text-tikoun-gold transition-colors">
+              Tikoun <span className="text-tikoun-gold">Aolam</span>
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
