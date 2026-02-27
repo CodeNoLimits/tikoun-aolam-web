@@ -6,6 +6,7 @@ import { ShoppingBag, Menu, X, ChevronDown, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FlyoutCart } from "@/components/shop/FlyoutCart";
 import { useCart } from "@/lib/cart-context";
+import { useCurrency } from "@/lib/currency-context";
 
 const BOOK_CATEGORIES = [
   { name: "Livres d'étude", href: "/produits?cat=livres-etude" },
@@ -20,7 +21,7 @@ export function Header() {
   const { itemCount } = useCart();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [currency, setCurrency] = useState("ILS");
+  const { currency, setCurrency } = useCurrency();
   const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
@@ -104,7 +105,7 @@ export function Header() {
             <div className="flex items-center bg-tikoun-white/5 rounded-full px-3 py-1 border border-tikoun-white/10 focus-within:border-tikoun-gold transition-colors">
                <select 
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
+                onChange={(e) => setCurrency(e.target.value as "ILS" | "EUR" | "USD")}
                 className="bg-transparent text-sm appearance-none outline-none cursor-pointer text-tikoun-white pr-2"
                >
                  <option value="ILS" className="bg-tikoun-black text-tikoun-white">ILS ₪</option>

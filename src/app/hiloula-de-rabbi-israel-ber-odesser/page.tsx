@@ -20,12 +20,22 @@ export default function HiloulaPage() {
       {/* Hero */}
       <div className="relative h-[70vh] min-h-[500px] flex items-end pb-20 overflow-hidden">
         <div className="absolute inset-0">
-          <Image
-            src="https://tikoun-aolam.com/wp-content/uploads/2023/11/Rabbi-Israel-Dov-Ber-Odesser-1.jpg"
-            alt="Rabbi Israël Ber Odesser — Le Saba"
-            fill className="object-cover object-center opacity-85" priority sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-tikoun-black via-tikoun-black/40 to-transparent" />
+          {/* Saba portrait: ghostly 26% opacity with fade-to-zero at the bottom */}
+          <div
+            className="absolute inset-0 z-[2]"
+            style={{
+              maskImage: 'linear-gradient(to bottom, black 20%, transparent 85%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black 20%, transparent 85%)',
+            }}
+          >
+            <Image
+              src="https://tikoun-aolam.com/wp-content/uploads/2023/11/Rabbi-Israel-Dov-Ber-Odesser-1.jpg"
+              alt="Rabbi Israël Ber Odesser — Le Saba"
+              fill className="object-cover object-center opacity-[0.26]" priority sizes="100vw"
+            />
+          </div>
+          {/* Subtle darkening at the very top for header readability */}
+          <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-b from-tikoun-black/70 to-transparent z-[3]" />
         </div>
         <div className="relative z-10 container mx-auto px-4 md:px-8 max-w-4xl">
           <motion.div

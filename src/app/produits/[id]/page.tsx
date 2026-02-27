@@ -22,6 +22,7 @@ import {
   type Product,
 } from "@/lib/products";
 import { useCart } from "@/lib/cart-context";
+import { useCurrency } from "@/lib/currency-context";
 
 export default function ProductDetails() {
   const params = useParams<{ id: string }>();
@@ -36,6 +37,7 @@ export default function ProductDetails() {
 
 function ProductContent({ product }: { product: Product }) {
   const { addItem } = useCart();
+  const { formatPrice, getPrice } = useCurrency();
   const variants = product.variants ?? [];
   const [selectedColor, setSelectedColor] = useState(variants[0] ?? null);
   const [activeImage, setActiveImage] = useState(0);
@@ -157,7 +159,7 @@ function ProductContent({ product }: { product: Product }) {
 
             <div className="flex items-center gap-6 mb-8">
               <span className="text-3xl font-medium text-tikoun-gold">
-                {product.price} ₪
+                {formatPrice(getPrice(product))}
               </span>
               {product.rating && (
                 <div className="flex items-center gap-2">
@@ -346,7 +348,7 @@ function ProductContent({ product }: { product: Product }) {
                 <h4 className="font-serif text-lg text-tikoun-white group-hover:text-tikoun-gold transition-colors line-clamp-1 mb-1">
                   {p.name}
                 </h4>
-                <p className="text-tikoun-gold font-medium">{p.price} ₪</p>
+                <p className="text-tikoun-gold font-medium">{formatPrice(getPrice(p))}</p>
               </Link>
             ))}
           </div>

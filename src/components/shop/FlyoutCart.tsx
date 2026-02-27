@@ -5,6 +5,7 @@ import { X, Minus, Plus, ShoppingBag, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useCart } from "@/lib/cart-context";
+import { useCurrency } from "@/lib/currency-context";
 
 export function FlyoutCart({
   open,
@@ -14,6 +15,8 @@ export function FlyoutCart({
   setOpen: (open: boolean) => void;
 }) {
   const { items, updateQty, removeItem, subtotal, tva, total } = useCart();
+  const { formatPrice, getPrice } = useCurrency();
+  const tvaLabel = `TVA (${Math.round(tva / subtotal * 100) || 0}%)`;
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -112,7 +115,7 @@ export function FlyoutCart({
                                 </button>
                               </div>
                               <span className="font-medium text-tikoun-white">
-                                {item.product.price * item.qty} ₪
+                                {formatPrice(getPrice(item.product) * item.qty)}
                               </span>
                             </div>
                           </div>
@@ -141,16 +144,18 @@ export function FlyoutCart({
                     <div className="space-y-2 mb-6 text-sm">
                       <div className="flex justify-between text-tikoun-white/70">
                         <span>Sous-total</span>
-                        <span>{subtotal.toFixed(2)} ₪</span>
+                        <span>{formatPrice(subtotal)}</span>
                       </div>
-                      <div className="flex justify-between text-tikoun-white/70">
-                        <span>TVA (17%)</span>
-                        <span>{tva.toFixed(2)} ₪</span>
-                      </div>
+                      {tva > 0 && (
+                        <div className="flex justify-between text-tikoun-white/70">
+                          <span>{tvaLabel}</span>
+                          <span>{formatPrice(tva)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-tikoun-white font-serif text-xl pt-2 border-t border-tikoun-white/10">
-                        <span>Total TTC</span>
+                        <span>{tva > 0 ? "Total TTC" : "Total"}</span>
                         <span className="text-tikoun-gold">
-                          {total.toFixed(2)} ₪
+                          {formatPrice(total)}
                         </span>
                       </div>
                     </div>

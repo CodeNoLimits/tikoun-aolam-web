@@ -6,7 +6,7 @@ import { Footer } from "@/components/layout/Footer";
 import { WhatsAppButton } from "@/components/shared/WhatsAppButton";
 import { ChatWidget } from "@/components/ai/ChatWidget";
 import { CartProvider } from "@/lib/cart-context";
-
+import { CurrencyProvider } from "@/lib/currency-context";
 import { AudioPlayer } from "@/components/AudioPlayer";
 
 const inter = Inter({
@@ -52,14 +52,16 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${playfair.variable} ${cinzel.variable} antialiased bg-tikoun-black text-tikoun-white selection:bg-tikoun-gold/20 selection:text-tikoun-gold min-h-screen flex flex-col`}
       >
-        <CartProvider>
-          <Header />
-          <main className="flex-grow">{children}</main>
-          <Footer />
-          <WhatsAppButton />
-          <ChatWidget />
-          <AudioPlayer />
-        </CartProvider>
+        <CurrencyProvider>
+          <CartProvider>
+            <Header />
+            <main className="flex-grow">{children}</main>
+            <Footer />
+            <WhatsAppButton />
+            <ChatWidget />
+            <AudioPlayer />
+          </CartProvider>
+        </CurrencyProvider>
       </body>
     </html>
   );

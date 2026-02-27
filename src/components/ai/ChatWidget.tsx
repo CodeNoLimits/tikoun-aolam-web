@@ -1,18 +1,21 @@
 "use client";
 
 import { useChat } from 'ai/react';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Sparkles, Mic, Volume2, MicOff, MessageCircle } from 'lucide-react';
+import { MessageSquare, X, Send, Sparkles, Mic, Volume2, MicOff, MessageCircle, Square } from 'lucide-react';
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeMode, setActiveMode] = useState<'text' | 'voice'>('text');
   const [isRecording, setIsRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const speechRecognitionRef = useRef<any>(null);
+  const lastSpokenIndexRef = useRef<number>(-1);
 
-  // Use refs to always have latest handlers without re-triggering setup
+  // Refs to latest handlers
   const handleSubmitRef = useRef(handleSubmit);
   const handleInputChangeRef = useRef(handleInputChange);
   useEffect(() => {
@@ -20,15 +23,68 @@ export function ChatWidget() {
     handleInputChangeRef.current = handleInputChange;
   });
 
-  const [speechRecognition, setSpeechRecognition] = useState<any>(null);
-
   useEffect(() => {
     if (activeMode === 'text') {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, activeMode, isOpen]);
 
-  // Initialize Speech Recognition — run once only
+  // Stop any ongoing speech
+  const stopSpeaking = () => {
+    if (typeof window !== 'undefined') {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  };
+
+  // Speak a text using Web Speech Synthesis (masculine French voice)
+  const speakText = (text: string) => {
+    if (typeof window === 'undefined') return;
+    
+    stopSpeaking();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fr-FR';
+    utterance.rate = 1.0;
+    utterance.pitch = 0.85; // Slightly deeper = more masculine
+    utterance.volume = 0.9;
+
+    // Try to find a good French masculine voice
+    const voices = window.speechSynthesis.getVoices();
+    const frenchMaleVoice = voices.find(v => 
+      v.lang.startsWith('fr') && (v.name.toLowerCase().includes('thomas') || v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('homme'))
+    ) || voices.find(v => 
+      v.lang.startsWith('fr') && !v.name.toLowerCase().includes('female') && !v.name.toLowerCase().includes('femme')
+    ) || voices.find(v => v.lang.startsWith('fr'));
+    
+    if (frenchMaleVoice) {
+      utterance.voice = frenchMaleVoice;
+    }
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // When a new assistant message arrives in voice mode, speak it
+  useEffect(() => {
+    if (activeMode !== 'voice' && activeMode !== 'text') return;
+    
+    const assistantMessages = messages.filter(m => m.role === 'assistant');
+    if (assistantMessages.length > 0 && assistantMessages.length > lastSpokenIndexRef.current + 1) {
+      const lastMsg = assistantMessages[assistantMessages.length - 1];
+      // Only auto-speak in voice mode
+      if (activeMode === 'voice' && !isLoading) {
+        speakText(lastMsg.content);
+      }
+      lastSpokenIndexRef.current = assistantMessages.length - 1;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, isLoading, activeMode]);
+
+  // Initialize Speech Recognition once
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -40,42 +96,77 @@ export function ChatWidget() {
 
         recognition.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
+          
+          // Interrupt TTS if speaking
+          if (typeof window !== 'undefined') {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+          }
+          
           handleInputChangeRef.current({ target: { value: transcript } } as any);
-
           setTimeout(() => {
-             handleSubmitRef.current({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>);
+            handleSubmitRef.current({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>);
           }, 300);
-
           setIsRecording(false);
-          setActiveMode('text');
         };
 
         recognition.onerror = (event: any) => {
-          console.error("Speech recognition error", event.error);
-          setIsRecording(false);
+          console.error("Speech recognition error:", event.error);
+          // Don't reset on "no-speech" — user just didn't talk yet
+          if (event.error !== 'no-speech') {
+            setIsRecording(false);
+          }
         };
 
         recognition.onend = () => {
           setIsRecording(false);
         };
 
-        setSpeechRecognition(recognition);
+        speechRecognitionRef.current = recognition;
+      }
+
+      // Preload voices
+      if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+        // Some browsers need this listener to load voices
+        window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
       }
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleRecording = () => {
-    if (!speechRecognition) {
+    const recognition = speechRecognitionRef.current;
+    if (!recognition) {
       alert("Votre navigateur ne supporte pas la reconnaissance vocale.");
       return;
     }
     
     if (isRecording) {
-      speechRecognition.stop();
+      recognition.stop();
       setIsRecording(false);
     } else {
-      speechRecognition.start();
-      setIsRecording(true);
+      // Stop TTS first if speaking, with a small delay to avoid audio conflict
+      if (isSpeaking && typeof window !== 'undefined') {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+      }
+      
+      try {
+        recognition.start();
+        setIsRecording(true);
+      } catch (e) {
+        console.error("Failed to start recognition:", e);
+        // May already be running, try stopping and restarting
+        try {
+          recognition.stop();
+          setTimeout(() => {
+            recognition.start();
+            setIsRecording(true);
+          }, 200);
+        } catch (e2) {
+          console.error("Second attempt failed:", e2);
+        }
+      }
     }
   };
 
@@ -119,7 +210,7 @@ export function ChatWidget() {
                   </div>
                 </div>
                 <button
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => { stopSpeaking(); setIsOpen(false); }}
                   className="text-tikoun-white/50 hover:text-tikoun-white transition-colors p-1 bg-tikoun-white/5 rounded-full"
                 >
                   <X className="w-4 h-4" />
@@ -129,7 +220,7 @@ export function ChatWidget() {
               {/* Mode Toggle Tabs */}
               <div className="flex w-full bg-tikoun-black/50 rounded-lg p-1 mb-3 border border-tikoun-white/5">
                 <button
-                  onClick={() => setActiveMode('text')}
+                  onClick={() => { stopSpeaking(); setActiveMode('text'); }}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm transition-all ${activeMode === 'text' ? 'bg-tikoun-white/10 text-tikoun-gold font-medium shadow' : 'text-tikoun-white/50 hover:text-tikoun-white'}`}
                 >
                   <MessageCircle className="w-4 h-4" /> Chat
@@ -143,7 +234,7 @@ export function ChatWidget() {
               </div>
             </div>
 
-            {/* Content Area - Switches based on mode */}
+            {/* Content Area */}
             <div className="flex-1 relative overflow-hidden bg-tikoun-black/60">
               <AnimatePresence mode="wait">
                 {activeMode === 'text' ? (
@@ -154,7 +245,6 @@ export function ChatWidget() {
                     exit={{ opacity: 0, x: -20 }}
                     className="absolute inset-0 flex flex-col"
                   >
-                    {/* Text Messages Area */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide">
                       {messages.length === 0 && (
                         <div className="text-center text-tikoun-white/50 text-sm mt-6 space-y-4 px-4">
@@ -187,7 +277,6 @@ export function ChatWidget() {
                       <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Text Input Area */}
                     <form onSubmit={handleSubmit} className="p-3 border-t border-tikoun-white/10 bg-tikoun-black/80">
                       <div className="relative flex items-center">
                         <input
@@ -214,24 +303,29 @@ export function ChatWidget() {
                     exit={{ opacity: 0, x: 20 }}
                     className="absolute inset-0 flex flex-col items-center justify-center p-6"
                   >
-                    <div className="text-center mb-12">
+                    <div className="text-center mb-8">
                       <h4 className="font-serif text-xl text-tikoun-gold mb-2">Conversation Vocale</h4>
                       <p className="text-sm text-tikoun-white/50 max-w-[250px] mx-auto">
-                        {isRecording ? "Gemini 2.5 vous écoute. Parlez naturellement..." : "Cliquez sur le microphone pour démarrer une session vocale interactive fluide."}
+                        {isSpeaking 
+                          ? "Gemini vous répond... Cliquez pour interrompre."
+                          : isRecording 
+                            ? "Gemini 2.5 vous écoute. Parlez naturellement..." 
+                            : "Cliquez sur le microphone pour démarrer."
+                        }
                       </p>
                     </div>
 
                     {/* Animated Pulsing Microphone Area */}
-                    <div className="relative mt-4 mb-16">
-                      {isRecording && (
+                    <div className="relative mt-4 mb-8">
+                      {(isRecording || isSpeaking) && (
                         <>
                           <motion.div
-                            className="absolute inset-0 rounded-full bg-tikoun-gold/20"
+                            className={`absolute inset-0 rounded-full ${isSpeaking ? 'bg-tikoun-copper/20' : 'bg-tikoun-gold/20'}`}
                             animate={{ scale: [1, 1.5, 2], opacity: [0.8, 0.3, 0] }}
                             transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
                           />
                           <motion.div
-                            className="absolute inset-0 rounded-full bg-tikoun-copper/30"
+                            className={`absolute inset-0 rounded-full ${isSpeaking ? 'bg-tikoun-gold/20' : 'bg-tikoun-copper/30'}`}
                             animate={{ scale: [1, 1.8, 2.5], opacity: [0.6, 0.2, 0] }}
                             transition={{ duration: 2.5, repeat: Infinity, ease: "easeOut", delay: 0.5 }}
                           />
@@ -239,11 +333,32 @@ export function ChatWidget() {
                       )}
                       <button
                         onClick={toggleRecording}
-                        className={`relative z-10 w-24 h-24 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${isRecording ? 'bg-tikoun-white text-tikoun-black shadow-tikoun-white/30 scale-105' : 'bg-gradient-to-br from-tikoun-copper to-tikoun-darkgray text-tikoun-white hover:scale-105'}`}
+                        className={`relative z-10 w-24 h-24 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+                          isSpeaking 
+                            ? 'bg-tikoun-copper text-tikoun-white shadow-tikoun-copper/30 scale-105'
+                            : isRecording 
+                              ? 'bg-tikoun-white text-tikoun-black shadow-tikoun-white/30 scale-105' 
+                              : 'bg-gradient-to-br from-tikoun-copper to-tikoun-darkgray text-tikoun-white hover:scale-105'
+                        }`}
                       >
-                        {isRecording ? <Mic className="w-10 h-10 animate-pulse" /> : <MicOff className="w-10 h-10" />}
+                        {isSpeaking 
+                          ? <Volume2 className="w-10 h-10 animate-pulse" />
+                          : isRecording 
+                            ? <Mic className="w-10 h-10 animate-pulse" /> 
+                            : <MicOff className="w-10 h-10" />
+                        }
                       </button>
                     </div>
+
+                    {/* Stop Button */}
+                    {isSpeaking && (
+                      <button
+                        onClick={stopSpeaking}
+                        className="flex items-center gap-2 px-5 py-2 bg-tikoun-white/10 rounded-full text-tikoun-white text-xs uppercase tracking-widest hover:bg-tikoun-white/20 transition-colors mb-4"
+                      >
+                        <Square className="w-3 h-3" /> Arrêter
+                      </button>
+                    )}
 
                     <div className="text-xs text-tikoun-white/40 uppercase tracking-widest text-center">
                       Propulsé par Google Gemini 2.5 Live

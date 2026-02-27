@@ -5,9 +5,13 @@ import {
   useContext,
   useState,
   useCallback,
+  useEffect,
   type ReactNode,
 } from "react";
 import type { Product } from "./products";
+import { useCurrency } from "./currency-context";
+
+const CART_KEY = "tikoun-cart";
 
 export interface CartItem {
   product: Product;
@@ -22,17 +26,32 @@ interface CartContextType {
   updateQty: (productId: string, delta: number) => void;
   clearCart: () => void;
   itemCount: number;
+  /** Subtotal in currently selected currency */
   subtotal: number;
+  /** TVA amount (17% Israel, 0% export) */
   tva: number;
+  /** Total = subtotal + tva (shipping NOT included — added at checkout) */
   total: number;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
 
-const TVA_RATE = 0.17; // Israel 17% VAT
-
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem(CART_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const { getPrice, tvaRate } = useCurrency();
+
+  // Persist cart to localStorage
+  useEffect(() => {
+    localStorage.setItem(CART_KEY, JSON.stringify(items));
+  }, [items]);
 
   const addItem = useCallback(
     (product: Product, qty = 1, color?: string) => {
@@ -65,12 +84,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => setItems([]), []);
 
+  // Compute totals using the selected currency price
   const subtotal = items.reduce(
-    (acc, item) => acc + item.product.price * item.qty,
+    (acc, item) => acc + getPrice(item.product) * item.qty,
     0
   );
-  const tva = +(subtotal * TVA_RATE).toFixed(2);
-  const total = subtotal + tva;
+  const tva = +(subtotal * tvaRate).toFixed(2);
+  const total = +(subtotal + tva).toFixed(2);
   const itemCount = items.reduce((acc, item) => acc + item.qty, 0);
 
   return (

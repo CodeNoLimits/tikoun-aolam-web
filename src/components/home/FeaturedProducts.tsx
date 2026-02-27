@@ -5,11 +5,13 @@ import Link from "next/link";
 import { ShoppingBag, Star } from "lucide-react";
 import { getFeaturedProducts } from "@/lib/products";
 import { useCart } from "@/lib/cart-context";
+import { useCurrency } from "@/lib/currency-context";
 
 const PRODUCTS = getFeaturedProducts();
 
 export function FeaturedProducts() {
   const { addItem } = useCart();
+  const { formatPrice, getPrice } = useCurrency();
 
   return (
     <section className="py-24 bg-tikoun-black relative z-10 border-t border-tikoun-white/5">
@@ -108,7 +110,7 @@ export function FeaturedProducts() {
                   </h3>
                 </Link>
                 <span className="text-tikoun-white/90 font-medium text-lg">
-                  {item.price} ₪
+                  {formatPrice(getPrice(item))}
                 </span>
               </div>
             </motion.div>

@@ -7,6 +7,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { ALL_PRODUCTS, type ProductCategory } from "@/lib/products";
 import { useCart } from "@/lib/cart-context";
+import { useCurrency } from "@/lib/currency-context";
 
 const CATEGORIES: Array<{ key: "all" | ProductCategory; label: string }> = [
   { key: "all", label: "Tous" },
@@ -27,6 +28,7 @@ function ShopContent() {
   );
   const [searchQuery, setSearchQuery] = useState("");
   const { addItem } = useCart();
+  const { formatPrice, getPrice } = useCurrency();
 
   // Sync URL param changes (browser back/forward)
   useEffect(() => {
@@ -172,7 +174,7 @@ function ShopContent() {
                 </Link>
                 <div className="flex items-center justify-between mt-auto">
                   <span className="text-tikoun-gold font-medium">
-                    {item.price} ₪
+                    {formatPrice(getPrice(item))}
                   </span>
                   {item.rating && (
                     <div className="flex gap-0.5">

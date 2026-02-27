@@ -1,20 +1,30 @@
 "use client";
 
 import { useCart } from "@/lib/cart-context";
+import { useCurrency, isEligibleForFreeShipping, SHIPPING_COUNTRIES, type ShippingCountryCode } from "@/lib/currency-context";
 import { useState } from "react";
 import Link from "next/link";
-import { ShoppingBag, ArrowRight, Trash2, CreditCard, Smartphone } from "lucide-react";
+import { ShoppingBag, ArrowRight, Trash2, CreditCard, Smartphone, Truck } from "lucide-react";
 import { motion } from "framer-motion";
 
 type PaymentMethod = "whatsapp" | "stripe" | "paypal";
 
 export default function CheckoutPage() {
   const { items, subtotal, tva, total, removeItem, clearCart } = useCart();
+  const {
+    formatPrice, getPrice, symbol, currency, stripeCurrency,
+    shippingCountry, setShippingCountry, shippingCost, shippingLabel, tvaRate,
+  } = useCurrency();
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [payMethod, setPayMethod] = useState<PaymentMethod>("whatsapp");
   const [loading, setLoading] = useState(false);
+
+  const freeShipping = isEligibleForFreeShipping(subtotal, currency, shippingCountry);
+  const finalShipping = freeShipping ? 0 : shippingCost;
+  const grandTotal = +(total + finalShipping).toFixed(2);
 
   const handleOrder = async () => {
     if (!name || !phone || !address) {
@@ -25,21 +35,31 @@ export default function CheckoutPage() {
 
     if (payMethod === "whatsapp") {
       const lines = items.map(
-        (i) => `• ${i.product.name}${i.product.subtitle ? ` (${i.product.subtitle})` : ""} x${i.qty} = ${i.product.price * i.qty}₪`
+        (i) => `• ${i.product.name}${i.product.subtitle ? ` (${i.product.subtitle})` : ""} x${i.qty} = ${formatPrice(getPrice(i.product) * i.qty)}`
       );
+      const shippingLine = freeShipping ? "Livraison : GRATUITE" : `Livraison (${shippingLabel}) : ${formatPrice(finalShipping)}`;
+      const tvaLine = tva > 0 ? `TVA (${Math.round(tvaRate * 100)}%) : ${formatPrice(tva)}` : "";
       const msg = encodeURIComponent(
-        `Bonjour Tikoun Aolam,\n\nNom : ${name}\nTél : ${phone}\nAdresse : ${address}\n\nCommande :\n${lines.join("\n")}\n\nTotal TTC : ${total.toFixed(2)}₪\n\nMerci !`
+        `Bonjour Tikoun Aolam,\n\nNom : ${name}\nTél : ${phone}\nAdresse : ${address}\nPays : ${SHIPPING_COUNTRIES.find(c => c.code === shippingCountry)?.label ?? shippingCountry}\n\nCommande :\n${lines.join("\n")}\n\n${shippingLine}\n${tvaLine}\nTotal : ${formatPrice(grandTotal)}\n\nMerci !`
       );
       clearCart();
       setLoading(false);
       window.open(`https://wa.me/972559759155?text=${msg}`, "_blank");
     } else if (payMethod === "stripe") {
-      // Stripe Checkout — calls /api/stripe-checkout
       try {
         const res = await fetch("/api/stripe-checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items, name, phone, address }),
+          body: JSON.stringify({
+            items,
+            name,
+            phone,
+            address,
+            currency: stripeCurrency,
+            shippingCountry,
+            shippingCost: finalShipping,
+            tvaRate,
+          }),
         });
         const { url } = await res.json();
         if (url) window.location.href = url;
@@ -49,8 +69,8 @@ export default function CheckoutPage() {
       }
       setLoading(false);
     } else if (payMethod === "paypal") {
-      // PayPal — redirect to PayPal.me with amount
-      const paypalUrl = `https://paypal.me/holyrentals/${total.toFixed(2)}ILS`;
+      const paypalCurrency = currency === "ILS" ? "ILS" : currency === "EUR" ? "EUR" : "USD";
+      const paypalUrl = `https://paypal.me/holyrentals/${grandTotal.toFixed(2)}${paypalCurrency}`;
       clearCart();
       setLoading(false);
       window.open(paypalUrl, "_blank");
@@ -92,7 +112,7 @@ export default function CheckoutPage() {
                     <p className="text-tikoun-white/50 text-xs mt-1">Qté : {item.qty}</p>
                   </div>
                   <div className="flex flex-col items-end gap-2 shrink-0">
-                    <span className="text-tikoun-gold font-medium text-sm">{item.product.price * item.qty} ₪</span>
+                    <span className="text-tikoun-gold font-medium text-sm">{formatPrice(getPrice(item.product) * item.qty)}</span>
                     <button onClick={() => removeItem(item.product.id)} className="text-tikoun-white/30 hover:text-red-400 transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -101,15 +121,34 @@ export default function CheckoutPage() {
               ))}
             </div>
 
+            {/* Totaux */}
             <div className="border-t border-tikoun-white/10 pt-4 space-y-2 text-sm">
               <div className="flex justify-between text-tikoun-white/60">
-                <span>Sous-total</span><span>{subtotal.toFixed(2)} ₪</span>
+                <span>Sous-total</span><span>{formatPrice(subtotal)}</span>
               </div>
+              {tva > 0 && (
+                <div className="flex justify-between text-tikoun-white/60">
+                  <span>TVA ({Math.round(tvaRate * 100)}%)</span><span>{formatPrice(tva)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-tikoun-white/60">
-                <span>TVA (17%)</span><span>{tva.toFixed(2)} ₪</span>
+                <span className="flex items-center gap-2">
+                  <Truck className="w-3.5 h-3.5" /> {shippingLabel}
+                </span>
+                <span>
+                  {freeShipping ? (
+                    <span className="text-green-400 font-medium">GRATUIT</span>
+                  ) : (
+                    formatPrice(finalShipping)
+                  )}
+                </span>
               </div>
+              {freeShipping && (
+                <p className="text-green-400/70 text-xs">Livraison offerte en Israël dès {formatPrice(200)}</p>
+              )}
               <div className="flex justify-between text-tikoun-white font-cinzel text-2xl pt-3 border-t border-tikoun-white/10">
-                <span>Total</span><span className="text-tikoun-gold">{total.toFixed(2)} ₪</span>
+                <span>{tva > 0 ? "Total TTC" : "Total"}</span>
+                <span className="text-tikoun-gold">{formatPrice(grandTotal)}</span>
               </div>
             </div>
           </div>
@@ -134,13 +173,28 @@ export default function CheckoutPage() {
                   />
                 </div>
               ))}
+
+              {/* Country / Shipping zone selector */}
+              <div>
+                <label className="block text-xs text-tikoun-white/50 uppercase tracking-widest mb-2">Pays de livraison *</label>
+                <select
+                  value={shippingCountry}
+                  onChange={(e) => setShippingCountry(e.target.value as ShippingCountryCode)}
+                  className="w-full bg-tikoun-white/5 border border-tikoun-white/10 rounded-lg px-4 py-3 text-tikoun-white focus:outline-none focus:border-tikoun-gold transition-colors text-sm appearance-none cursor-pointer"
+                >
+                  {SHIPPING_COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code} className="bg-tikoun-black text-tikoun-white">
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Payment method selector */}
             <div className="mb-6">
               <label className="block text-xs text-tikoun-white/50 uppercase tracking-widest mb-3">Mode de paiement</label>
               <div className="grid grid-cols-3 gap-3">
-                {/* WhatsApp */}
                 <button
                   onClick={() => setPayMethod("whatsapp")}
                   className={`p-3 rounded-xl border text-center transition-all text-xs font-medium ${
@@ -152,7 +206,6 @@ export default function CheckoutPage() {
                   <Smartphone className="w-5 h-5 mx-auto mb-1" />
                   WhatsApp
                 </button>
-                {/* Stripe */}
                 <button
                   onClick={() => setPayMethod("stripe")}
                   className={`p-3 rounded-xl border text-center transition-all text-xs font-medium ${
@@ -164,7 +217,6 @@ export default function CheckoutPage() {
                   <CreditCard className="w-5 h-5 mx-auto mb-1" />
                   Carte
                 </button>
-                {/* PayPal */}
                 <button
                   onClick={() => setPayMethod("paypal")}
                   className={`p-3 rounded-xl border text-center transition-all text-xs font-medium ${
@@ -179,12 +231,12 @@ export default function CheckoutPage() {
               </div>
               {payMethod === "stripe" && (
                 <p className="text-tikoun-white/40 text-xs mt-2 text-center">
-                  Paiement sécurisé par carte bancaire via Stripe
+                  Paiement sécurisé par carte bancaire via Stripe ({symbol})
                 </p>
               )}
               {payMethod === "paypal" && (
                 <p className="text-tikoun-white/40 text-xs mt-2 text-center">
-                  Vous serez redirigé vers PayPal pour finaliser
+                  Vous serez redirigé vers PayPal pour finaliser ({symbol})
                 </p>
               )}
               {payMethod === "whatsapp" && (
@@ -201,7 +253,7 @@ export default function CheckoutPage() {
             >
               {loading ? "Traitement..." : (
                 <>
-                  {payMethod === "whatsapp" ? "Commander via WhatsApp" : payMethod === "stripe" ? "Payer par carte" : "Payer via PayPal"}
+                  {payMethod === "whatsapp" ? "Commander via WhatsApp" : payMethod === "stripe" ? `Payer ${formatPrice(grandTotal)}` : `Payer ${formatPrice(grandTotal)}`}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

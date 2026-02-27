@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useCurrency } from "@/lib/currency-context";
+import { convertPrice } from "@/lib/products";
 
 const SHOWCASE_BOOKS = [
   {
@@ -34,6 +36,7 @@ const SHOWCASE_BOOKS = [
 
 export function BookShowcase() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const { currency } = useCurrency();
 
   const nextSlide = () => {
     setActiveIndex((prev) => (prev === SHOWCASE_BOOKS.length - 1 ? 0 : prev + 1));
@@ -122,7 +125,7 @@ export function BookShowcase() {
                 {book.desc}
               </p>
               <div className="flex items-center gap-6">
-                <span className="text-2xl font-medium text-tikoun-white">{book.price} ₪</span>
+                <span className="text-2xl font-medium text-tikoun-white">{convertPrice(book.price, currency).amount} {convertPrice(book.price, currency).symbol}</span>
                 <Link
                   href={`/produits/${book.id}`}
                   className="bg-tikoun-white text-tikoun-black px-8 py-3 rounded text-sm font-bold tracking-widest uppercase hover:bg-tikoun-gold transition-colors"
