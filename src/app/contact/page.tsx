@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { MessageCircle, Mail, Phone, Flame } from "lucide-react";
+import { MessageCircle, Mail, Phone, Flame, Send, CheckCircle2, Loader2 } from "lucide-react";
 
 export default function ContactPage() {
   return (
@@ -12,7 +13,7 @@ export default function ContactPage() {
         muted
         loop
         playsInline
-        className="fixed inset-0 w-full h-full object-cover pointer-events-none"
+        className="fixed inset-0 w-full h-full object-contain object-top md:object-cover md:object-center pointer-events-none"
         style={{ opacity: 0.15, zIndex: 0 }}
       >
         <source src="/videos/hero-cinematic-2.mp4" type="video/mp4" />
@@ -82,36 +83,8 @@ export default function ContactPage() {
             <div className="text-[#25D366]/40 group-hover:text-[#25D366] transition-all text-2xl">→</div>
           </motion.a>
 
-          {/* Email */}
-          <motion.a
-            href="mailto:contact@tikoun-aolam.com"
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.35 }}
-            className="group flex items-center gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl border transition-all duration-300 cursor-pointer"
-            style={{
-              background: "linear-gradient(135deg, rgba(212,175,55,0.05), rgba(0,0,0,0))",
-              borderColor: "rgba(212,175,55,0.2)",
-            }}
-            whileHover={{
-              scale: 1.02,
-              borderColor: "rgba(212,175,55,0.5)",
-              boxShadow: "0 0 30px rgba(212,175,55,0.1)",
-            }}
-          >
-            <div
-              className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
-              style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.3)" }}
-            >
-              <Mail className="w-8 h-8 text-tikoun-gold" />
-            </div>
-            <div className="flex-1">
-              <div className="font-cinzel text-lg text-tikoun-white tracking-wide mb-1 group-hover:text-tikoun-gold transition-colors">Email</div>
-              <div className="text-tikoun-white/60 text-sm">contact@tikoun-aolam.com</div>
-              <div className="text-tikoun-white/40 text-xs mt-1 tracking-widest uppercase">Réclamations · Éditions · Partenariats</div>
-            </div>
-            <div className="text-tikoun-gold/40 group-hover:text-tikoun-gold transition-all text-2xl">→</div>
-          </motion.a>
+          {/* Email — Contact Form */}
+          <ContactForm />
 
           {/* Téléphone */}
           <motion.a
@@ -161,5 +134,105 @@ export default function ContactPage() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+function ContactForm() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("sending");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message }),
+      });
+      if (!res.ok) throw new Error();
+      setStatus("sent");
+      setName("");
+      setEmail("");
+      setMessage("");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -30 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.6, delay: 0.35 }}
+      className="rounded-2xl border p-4 sm:p-6"
+      style={{
+        background: "linear-gradient(135deg, rgba(212,175,55,0.05), rgba(0,0,0,0))",
+        borderColor: "rgba(212,175,55,0.2)",
+      }}
+    >
+      <div className="flex items-center gap-4 sm:gap-6 mb-4">
+        <div
+          className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0"
+          style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.3)" }}
+        >
+          <Mail className="w-8 h-8 text-tikoun-gold" />
+        </div>
+        <div className="flex-1">
+          <div className="font-cinzel text-lg text-tikoun-white tracking-wide mb-1">Envoyer un Email</div>
+          <div className="text-tikoun-white/40 text-xs tracking-widest uppercase">Réclamations · Éditions · Partenariats</div>
+        </div>
+      </div>
+
+      {status === "sent" ? (
+        <div className="flex items-center gap-3 py-6 justify-center text-tikoun-gold">
+          <CheckCircle2 className="w-5 h-5" />
+          <span className="font-medium">Message envoyé avec succès !</span>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input
+            type="text"
+            placeholder="Votre nom"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            className="w-full bg-tikoun-white/5 border border-tikoun-white/10 rounded-lg px-4 py-3 text-sm text-tikoun-white placeholder:text-tikoun-white/30 focus:outline-none focus:border-tikoun-gold transition-colors"
+          />
+          <input
+            type="email"
+            placeholder="Votre email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full bg-tikoun-white/5 border border-tikoun-white/10 rounded-lg px-4 py-3 text-sm text-tikoun-white placeholder:text-tikoun-white/30 focus:outline-none focus:border-tikoun-gold transition-colors"
+          />
+          <textarea
+            placeholder="Votre message..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            required
+            rows={4}
+            className="w-full bg-tikoun-white/5 border border-tikoun-white/10 rounded-lg px-4 py-3 text-sm text-tikoun-white placeholder:text-tikoun-white/30 focus:outline-none focus:border-tikoun-gold transition-colors resize-none"
+          />
+          <button
+            type="submit"
+            disabled={status === "sending"}
+            className="w-full bg-tikoun-gold text-tikoun-black py-3 rounded-lg font-bold text-sm tracking-widest uppercase hover:bg-white transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {status === "sending" ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Envoi en cours...</>
+            ) : (
+              <><Send className="w-4 h-4" /> Envoyer le message</>
+            )}
+          </button>
+          {status === "error" && (
+            <p className="text-red-400 text-xs text-center">Une erreur est survenue. Réessayez ou contactez-nous via WhatsApp.</p>
+          )}
+        </form>
+      )}
+    </motion.div>
   );
 }
