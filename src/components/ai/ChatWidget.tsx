@@ -140,9 +140,16 @@ export function ChatWidget() {
     utterance.pitch = 0.88;
     utterance.volume = 1.0;
 
+    // Best French voice priority: macOS male → Chrome male → any French
     const voices = window.speechSynthesis.getVoices();
-    const frVoice = voices.find(v => v.lang.startsWith('fr'));
-    if (frVoice) utterance.voice = frVoice;
+    const preferredNames = ['Edouard', 'Thomas', 'Google français', 'Microsoft Paul'];
+    let bestVoice = null;
+    for (const name of preferredNames) {
+      const v = voices.find(vx => vx.name.includes(name));
+      if (v) { bestVoice = v; break; }
+    }
+    if (!bestVoice) bestVoice = voices.find(v => v.lang.startsWith('fr')) ?? null;
+    if (bestVoice) utterance.voice = bestVoice;
 
     utterance.onstart = () => { setIsSpeaking(true); setVoiceStatus('speaking'); };
     utterance.onend = () => {
@@ -205,6 +212,7 @@ export function ChatWidget() {
       audio.onerror = () => {
         freeAudioUrl();
         setIsSpeaking(false);
+        isSpeakingRef.current = false; // sync immediately
         console.warn('Audio element error, falling back to Web Speech API');
         trySpeak(clean);
       };
@@ -214,6 +222,7 @@ export function ChatWidget() {
       console.warn('Gemini TTS failed, falling back to Web Speech API:', err);
       freeAudioUrl();
       setIsSpeaking(false);
+      isSpeakingRef.current = false; // sync immediately
       pendingTTSTextRef.current = text;
       trySpeak(clean); // fallback
     }
@@ -232,7 +241,7 @@ export function ChatWidget() {
       lastSpokenIndexRef.current = assistantMessages.length - 1;
       setVoiceResponse(lastMsg.content);
       setVoiceStatus('speaking');
-      playGeminiTTS(lastMsg.content);
+      trySpeak(lastMsg.content); // Web Speech API — zero latency (Gemini TTS too slow)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isLoading, activeMode]);
@@ -385,14 +394,19 @@ export function ChatWidget() {
 
   // End conversation: stop everything, resume music
   const endConversation = useCallback(() => {
+    // Force sync all refs immediately so no async callback restarts anything
     shouldRestartRef.current = false;
+    isRecordingRef.current = false;
+    isSpeakingRef.current = false;
+    // Always try to stop recognition regardless of ref state
     const recognition = speechRecognitionRef.current;
-    if (recognition && isRecordingRef.current) {
-      try { recognition.stop(); } catch { /* ignore */ }
+    if (recognition) {
+      try { recognition.abort(); } catch { /* ignore */ }
     }
     stopSpeaking();
     freeAudioUrl();
     setIsRecording(false);
+    setIsSpeaking(false);
     setVoiceStatus('idle');
     setVoiceTranscript('');
     setVoiceResponse('');

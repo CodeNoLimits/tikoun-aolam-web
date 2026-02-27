@@ -359,27 +359,24 @@ export default function ProposalPage() {
                 Gestion réseaux sociaux, maintenance, production vidéo — et la refonte V2 <strong className="text-tikoun-gold">offerte à prix exceptionnel</strong>.
               </p>
               <div className="bg-tikoun-black/50 rounded-xl p-4 mb-5 border border-tikoun-gold/30">
-                <p className="text-tikoun-gold text-xs font-bold uppercase tracking-widest mb-2">🎁 Offre Exclusive — Refonte V2</p>
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-tikoun-white/30 text-sm line-through">8 000 ₪</span>
-                  <span className="text-tikoun-white/40 text-xs">→</span>
-                  <span className="text-tikoun-white/50 text-sm line-through">6 000 ₪</span>
-                  <span className="text-tikoun-white/40 text-xs">→</span>
-                  <span className="text-tikoun-gold text-2xl font-serif font-bold">4 000 ₪</span>
-                  <span className="text-tikoun-white/50 text-xs">seulement</span>
+                <p className="text-tikoun-gold text-xs font-bold uppercase tracking-widest mb-3">🎁 Offre Exclusive — Refonte V2</p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="text-tikoun-white/35 text-base line-through whitespace-nowrap">8 000 ₪</span>
+                  <span className="text-tikoun-gold text-3xl font-serif font-bold whitespace-nowrap">4 000 ₪</span>
+                  <span className="bg-tikoun-gold text-tikoun-black text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full whitespace-nowrap">-50%</span>
                 </div>
-                <p className="text-tikoun-white/60 text-xs">avec l&apos;adoption du pack mensuel</p>
+                <p className="text-tikoun-white/50 text-xs mt-2">avec l&apos;adoption du pack mensuel</p>
               </div>
               <div className="mb-5">
                 <span className="text-4xl font-serif text-tikoun-gold">3 000</span>
                 <span className="text-tikoun-white/80 ml-2 font-medium">₪ / mois</span>
               </div>
               <ul className="space-y-3 text-sm text-tikoun-white/80">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0" /> Refonte V2 à <strong className="text-tikoun-gold">4 000 ₪</strong></li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0" /> Maintenance + Hébergement</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0" /> Gestion Réseaux Sociaux</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0" /> Production Vidéos Pro</li>
-                <li className="flex items-center gap-2"><Zap className="w-4 h-4 text-tikoun-gold shrink-0" /> Agent IA Vocal + Boost acquisition</li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0 mt-0.5" /><span>Refonte V2 <strong className="text-tikoun-gold">offerte à 4 000 ₪</strong></span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0 mt-0.5" /><span>Maintenance + Hébergement Vercel</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0 mt-0.5" /><span>Gestion Réseaux Sociaux</span></li>
+                <li className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0 mt-0.5" /><span>Production Vidéos Professionnelles</span></li>
+                <li className="flex items-start gap-2"><Zap className="w-4 h-4 text-tikoun-gold shrink-0 mt-0.5" /><span>Agent IA Vocal + Boost acquisition</span></li>
               </ul>
             </div>
           </div>
