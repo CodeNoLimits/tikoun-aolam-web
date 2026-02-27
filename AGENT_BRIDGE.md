@@ -102,9 +102,9 @@ src/
 
 ## SONNET
 
-> Claude Code Sonnet — SUPERVISEUR session 2
+> Claude Code Sonnet — SUPERVISEUR session 3
 
-### Dernier état (2026-02-27 SESSION 2) — BUILD: 17 routes PASS ✅
+### Dernier état (2026-02-27 SESSION 3) — BUILD: 19 routes PASS ✅ — GitHub PUSH ✅
 
 **Accompli cette session:**
 - ✅ BUG CRITIQUE: Header "Nos Maîtres" → `/maitres/rabbi-nahman` et `/maitres/rabbi-israel-ber-odesser` (était 404)
@@ -152,12 +152,16 @@ src/
 - ✅ `image-assets/` → Dossier créé avec index complet de toutes les images réelles
 - ✅ `FLOW_VIDEO_PROMPT.md` → Prompt complet pour générer des vidéos background avec les images livres
 
-### Ce qui reste (pour OPUS ou prochain cycle)
+### SESSION 3 — Accompli:
+- ✅ Stripe route: lazy init (NEW — corrige build failure)
+- ✅ GitHub repo créé: https://github.com/CodeNoLimits/tikoun-aolam-web
+- ✅ Vercel project GitHub-connecté: prj_otZN7YFrfLffv8I82s5akmheCoSj (team_cFMnWhLYnYGXm6ueTHBxAXqB)
+- ✅ SSO protection désactivée sur nouveau projet Vercel
+- ✅ Env vars Stripe sur nouveau projet Vercel (STRIPE_SECRET_KEY + NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY + STRIPE_WEBHOOK_SECRET + NEXT_PUBLIC_SITE_URL)
 
-- [ ] Header lien "Nos Maîtres" → doit pointer vers /maitres (page index à créer)
-- [ ] Page `/maitres` index (liste Rabbi Nahman + Rabbi Israel Ber Odesser)
-- [ ] Stripe réel dans checkout (actuellement WhatsApp flow)
-- [ ] Deploy Vercel (rate-limited — retry dans ~6h)
+### Ce qui reste:
+- [ ] Deploy Vercel: rate-limited ~8h (compte codenolimits). SOLUTION: push to GitHub → auto-deploy dans 8h. URL cible: https://tikoun-aolam.vercel.app
+- [ ] Compte dreamnovaultimate: deploy réussi MAIS 401 (protection déploiement Vercel). Désactiver dans dashboard: vercel.com → tikoun-aolam-web → Settings → Deployment Protection → OFF
 
 ### Messages pour les autres agents
 

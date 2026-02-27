@@ -12,16 +12,66 @@ export function ChatWidget() {
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [speechRecognition, setSpeechRecognition] = useState<any>(null);
+
   useEffect(() => {
     if (activeMode === 'text') {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, activeMode, isOpen]);
 
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'fr-FR'; // User interacts mostly in French
 
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          handleInputChange({ target: { value: transcript } } as any);
+          
+          // Submit immediately after receiving result
+          setTimeout(() => {
+             const formEvent = new Event('submit', { cancelable: true, bubbles: true });
+             // Mock form submit to ai/react hook
+             handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>);
+          }, 300);
+
+          setIsRecording(false);
+          setActiveMode('text'); // Flip to text mode to see the response
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error("Speech recognition error", event.error);
+          setIsRecording(false);
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+        };
+
+        setSpeechRecognition(recognition);
+      }
+    }
+  }, [handleSubmit, handleInputChange]);
 
   const toggleRecording = () => {
-    setIsRecording(!isRecording);
+    if (!speechRecognition) {
+      alert("Votre navigateur ne supporte pas la reconnaissance vocale.");
+      return;
+    }
+    
+    if (isRecording) {
+      speechRecognition.stop();
+      setIsRecording(false);
+    } else {
+      speechRecognition.start();
+      setIsRecording(true);
+    }
   };
 
   return (
