@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
+const TVA_RATE = 0.17; // Israel 17% VAT — must match cart-context.tsx
+
 export async function POST(req: NextRequest) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2026-02-25.clover",
-  });
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
   try {
     const { items, name, phone, address } = await req.json();
+
+    if (!items?.length) {
+      return NextResponse.json({ error: "Panier vide" }, { status: 400 });
+    }
 
     const lineItems = items.map((item: {
       product: { name: string; price: number; image: string };
@@ -19,7 +23,7 @@ export async function POST(req: NextRequest) {
           name: item.product.name,
           images: [item.product.image],
         },
-        unit_amount: Math.round(item.product.price * 100), // ILS cents
+        unit_amount: Math.round(item.product.price * (1 + TVA_RATE) * 100), // ILS agorot, TVA incluse
       },
       quantity: item.qty,
     }));

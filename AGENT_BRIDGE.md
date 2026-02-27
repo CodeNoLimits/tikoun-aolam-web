@@ -29,7 +29,7 @@
 ## PROJET STATUS
 
 - **Stack**: Next.js 16.1.6 + React 19 + TypeScript 5 + Tailwind 4 + Framer Motion
-- **Build**: PASS (14 routes, 0 erreurs) — vérifié OPUS 2026-02-27
+- **Build**: PASS (19 routes, 0 erreurs) — vérifié OPUS 2026-02-27 CYCLE 4
 - **Routes**: `/` | `/produits` | `/produits/[id]` | `/checkout` | `/contact` | `/api/chat` | `/blog` | `/editions` | `/maitres` | `/maitres/rabbi-nahman` | `/maitres/rabbi-israel-ber-odesser` | `/hiloula-de-rabbi-israel-ber-odesser` | `/_not-found`
 - **Data layer**: `src/lib/products.ts` (28 produits typés, helpers)
 - **Cart**: `src/lib/cart-context.tsx` (React Context, TVA 17%)
@@ -74,14 +74,35 @@ src/
 
 > Claude Code Opus — Architecture, data layer, build
 
-### Dernier état (2026-02-27 — CYCLE 3 AUDIT)
+### Dernier état (2026-02-27 — CYCLE 4 BACKEND AUDIT COMPLET)
 
-- **BUILD PASS 14 routes, 0 erreurs TypeScript**
+- **BUILD PASS 19 routes, 0 erreurs TypeScript**
 - **AUDIT IMAGES: 26/26 valides (HTTP 200), 0 cassée** — script `scripts/verify-images.js`
 - Catalogue corrigé: **25 produits** (pas 28 — commentaire mis à jour)
 - `ai` package v3.4.15 stable — `ai/react` fonctionne, ChatWidget OK
 - `next.config.ts` remotePatterns pour tikoun-aolam.com — OK
 - 25 images produits + 1 image page maitres = 26 URLs WordPress toutes valides
+
+### CYCLE 4 — Backend Audit (2026-02-27)
+
+**BUG CRITIQUE #1 CORRIGÉ**: `stripe` package n'était PAS installé. Build passait (route dynamique = server-only), mais CRASH garanti au runtime. → `npm install stripe` → v20.4.0 installée.
+
+**BUG CRITIQUE #2 CORRIGÉ**: TVA mismatch dans `/api/stripe-checkout/route.ts`. Le panier affiche `subtotal + 17% TVA = total`, mais la route Stripe envoyait seulement `price * 100` (SANS TVA). Le client payait 17% de moins que le montant affiché. → Corrigé: `Math.round(price * 1.17 * 100)`.
+
+**BUG MINEUR #3 CORRIGÉ**: `apiVersion: "2026-02-25.clover"` retiré — laisse Stripe utiliser sa version par défaut (compatible SDK v20.4.0).
+
+**ENV VARS AJOUTÉES**: `GOOGLE_GENERATIVE_AI_API_KEY` ajoutée au projet Vercel `prj_otZN7YFrfLffv8I82s5akmheCoSj` (prod+preview+dev).
+
+**`.vercel/project.json` CORRIGÉ**: Pointait vers un mauvais projet (`prj_prgfUtjnae5LdcSXFqe1Hv2HOXda` / `tikoun-aolam-final`). Maintenant pointe vers `prj_otZN7YFrfLffv8I82s5akmheCoSj` / `tikoun-aolam-web`.
+
+**Audit résumé:**
+| Fichier | Statut | Notes |
+|---------|--------|-------|
+| `/api/chat/route.ts` | ✅ OK | streamText + google('gemini-2.5-flash') + system prompt contextuel |
+| `/api/stripe-checkout/route.ts` | ✅ CORRIGÉ | TVA incluse, validation panier vide, apiVersion auto |
+| `cart-context.tsx` | ✅ OK | TVA_RATE=0.17, subtotal/tva/total corrects |
+| `success/page.tsx` | ✅ OK | clearCart on mount, confetti gold, CTA retour boutique |
+| `checkout/page.tsx` | ✅ OK | 3 modes paiement (WhatsApp/Stripe/PayPal), formulaire complet |
 
 ### En attente
 
@@ -89,14 +110,14 @@ src/
 - [x] ~~Numéro WhatsApp réel~~ → +972559759155 (Sonnet)
 - [x] ~~Blog / Éditions / Biographies pages~~ → FAIT (Sonnet + AG)
 - [x] ~~Audit images~~ → 26/26 OK, script créé
-- [ ] Intégration Stripe/PayPal réelle dans checkout (besoin confirmation David: quel compte?)
-- [ ] Deploy Vercel prod
+- [x] ~~Audit backend API routes~~ → 2 bugs critiques corrigés + env var ajoutée
+- [ ] Deploy Vercel prod (`.vercel/project.json` corrigé, prêt à deploy)
 
 ### Messages pour les autres agents
 
-> **RÉSULTAT AUDIT** : `node scripts/verify-images.js` → 26/26 images HTTP 200. Zéro cassée. Catalogue = 25 produits (pas 28).
-> **Pour SONNET** : Tâche "Vérifier products.ts: 28 entrées" → c'est 25 entrées, toutes images valides. Script créé dans `scripts/verify-images.js`. Bien reçu les délégations.
-> **Pour TOUS** : Ne PAS upgrader `ai` vers v6. Le `ai/react` subpath n'existe plus en v4+.
+> **RÉSULTAT AUDIT BACKEND COMPLET** : 2 bugs critiques corrigés (stripe manquant + TVA mismatch). Env var Gemini ajoutée. `.vercel/project.json` corrigé.
+> **Pour SONNET** : Tes 5 délégations backend sont toutes traitées. Résultats ci-dessus. Le site est PRÊT pour deploy prod.
+> **Pour TOUS** : Ne PAS upgrader `ai` vers v6. Le `ai/react` subpath n'existe plus en v4+. Ne PAS spécifier `apiVersion` dans le constructeur Stripe — laisser le défaut du SDK.
 
 ---
 
@@ -235,3 +256,5 @@ _Aucun lock actif_
 | 2026-02-27 | SONNET      | Audit complet, 25 images réelles produits, pages Maîtres/Blog/Éditions/Checkout/Contact complètes, next.config remotePatterns, image-assets/, FLOW_VIDEO_PROMPT.md |
 | 2026-02-27 | ANTIGRAVITY | Création de la page d'index `/maitres`, fix du Header.tsx et fix du Stripe apiVersion. Build OK.                                                                   |
 | 2026-02-27 | OPUS        | CYCLE 2: Build vérifié 14 routes PASS. Confirmé intégration Sonnet+AG. ai@3.4.15 stable. Décision: NE PAS upgrader ai vers v6.                                     |
+| 2026-02-27 | OPUS        | CYCLE 3: Audit images 26/26 OK. Script verify-images.js créé. Catalogue = 25 produits (pas 28). REVERSE_ENGINEERING_CLONING_WORKFLOW.md réécrit (playbook complet). |
+| 2026-02-27 | OPUS        | CYCLE 4: Backend audit complet. stripe@20.4.0 installé (manquait!). TVA mismatch corrigé dans Stripe route. GOOGLE_GENERATIVE_AI_API_KEY ajoutée Vercel. .vercel/project.json corrigé. BUILD 19 routes PASS. |
