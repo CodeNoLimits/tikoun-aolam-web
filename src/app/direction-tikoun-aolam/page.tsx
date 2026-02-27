@@ -246,6 +246,37 @@ export default function ProposalPage() {
           </div>
         </section>
 
+        {/* Voice AI Module — Already Delivered */}
+        <section className="mb-16 bg-gradient-to-br from-tikoun-gold/10 to-tikoun-copper/5 border border-tikoun-gold/30 rounded-2xl p-8 md:p-10">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-12 h-12 rounded-full bg-tikoun-gold/20 flex items-center justify-center text-tikoun-gold">
+              <Zap className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="font-serif text-2xl md:text-3xl text-tikoun-white">Module IA Conversationnel Vocal</h2>
+              <span className="text-tikoun-gold text-xs uppercase tracking-widest font-medium">Inclus dans la livraison du site final</span>
+            </div>
+          </div>
+          <p className="text-tikoun-white/70 font-light leading-relaxed mb-6 max-w-3xl">
+            Le site final intégrera un <strong className="text-tikoun-white">assistant IA conversationnel vocal</strong> propulsé par Google Gemini 2.5, permettant à vos visiteurs de dialoguer naturellement — à la voix ou par écrit — avec un conseiller spirituel virtuel connaissant l&apos;intégralité de votre catalogue, vos enseignements, et vos modalités de commande.
+          </p>
+          <div className="grid md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-tikoun-black/50 rounded-xl p-4 border border-tikoun-white/10">
+              <p className="text-tikoun-gold font-medium mb-1 text-sm">🎙 Mode Vocal</p>
+              <p className="text-tikoun-white/60 text-xs font-light">Le client parle, Gemini répond à voix haute — sans clavier.</p>
+            </div>
+            <div className="bg-tikoun-black/50 rounded-xl p-4 border border-tikoun-white/10">
+              <p className="text-tikoun-gold font-medium mb-1 text-sm">💬 Mode Chat</p>
+              <p className="text-tikoun-white/60 text-xs font-light">Interface texte intuitive avec réponses en streaming instantané.</p>
+            </div>
+            <div className="bg-tikoun-black/50 rounded-xl p-4 border border-tikoun-white/10">
+              <p className="text-tikoun-gold font-medium mb-1 text-sm">📚 Connaissance Catalogue</p>
+              <p className="text-tikoun-white/60 text-xs font-light">L&apos;IA connaît chaque livre, prix, et catégorie de votre boutique.</p>
+            </div>
+          </div>
+          <p className="text-tikoun-white/40 text-xs italic">Ce module est visible en bas à droite de cette page-démo — cliquez sur l&apos;icône pour l&apos;essayer.</p>
+        </section>
+
         {/* Stripe/PayPal Integration Note */}
         <section className="text-center mb-16 bg-tikoun-white/5 border border-tikoun-white/10 rounded-2xl p-8">
           <h3 className="font-serif text-2xl text-tikoun-white mb-4">Prochaines Étapes : Paiement en Ligne</h3>
