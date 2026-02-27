@@ -147,9 +147,10 @@ export function ChatWidget() {
     utterance.onstart = () => { setIsSpeaking(true); setVoiceStatus('speaking'); };
     utterance.onend = () => {
       setIsSpeaking(false);
+      isSpeakingRef.current = false; // sync ref immediately
       setVoiceStatus('idle');
       pendingTTSTextRef.current = null;
-      setTimeout(restartMic, 700);
+      setTimeout(restartMic, 500);
     };
     utterance.onerror = () => {
       setIsSpeaking(false);
@@ -175,15 +176,6 @@ export function ChatWidget() {
     setShowReplay(false);
     freeAudioUrl();
 
-    // Start mic while AI speaks → ready for barge-in
-    const recognition = speechRecognitionRef.current;
-    if (recognition && shouldRestartRef.current && !isRecordingRef.current) {
-      try {
-        recognition.start();
-        setIsRecording(true);
-      } catch { /* already running */ }
-    }
-
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -204,16 +196,11 @@ export function ChatWidget() {
       audio.onended = () => {
         freeAudioUrl();
         setIsSpeaking(false);
+        isSpeakingRef.current = false; // sync ref immediately (don't wait for useEffect)
         pendingTTSTextRef.current = null;
         setShowReplay(false);
-        // Mic was already started for barge-in; if not recording, restart
-        if (shouldRestartRef.current && !isRecordingRef.current) {
-          setTimeout(restartMic, 400);
-        } else if (shouldRestartRef.current) {
-          setVoiceStatus('listening');
-        } else {
-          setVoiceStatus('idle');
-        }
+        // Always try to restart mic after TTS finishes
+        setTimeout(restartMic, 500);
       };
       audio.onerror = () => {
         freeAudioUrl();
