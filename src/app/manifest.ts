@@ -14,13 +14,13 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['shopping', 'books', 'lifestyle', 'religion'],
     icons: [
       {
-        src: '/icon.png',
+        src: '/icon',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/apple-icon.png',
+        src: '/apple-icon',
         sizes: '180x180',
         type: 'image/png',
         purpose: 'any',
