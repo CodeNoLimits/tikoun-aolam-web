@@ -18,7 +18,6 @@ export function ChatWidget() {
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
   const [showReplay, setShowReplay] = useState(false);
 
-  // useChat: use append() for programmatic submit (no form input hack)
   const { messages, input, handleInputChange, handleSubmit, isLoading, append } = useChat();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -27,9 +26,11 @@ export function ChatWidget() {
   const lastSpokenIndexRef = useRef<number>(-1);
   const ttsUnlockedRef = useRef(false);
   const pendingTTSTextRef = useRef<string | null>(null);
-  const shouldRestartRef = useRef(false); // true = keep mic alive (voice session active)
+  const shouldRestartRef = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string | null>(null); // track objectURL for cleanup
 
-  // Stable refs — always up-to-date without causing stale closures
+  // Stable refs — avoid stale closures
   const activeModeRef = useRef<'text' | 'voice'>('text');
   const isRecordingRef = useRef(false);
   const isSpeakingRef = useRef(false);
@@ -42,12 +43,10 @@ export function ChatWidget() {
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { voiceStatusRef.current = voiceStatus; }, [voiceStatus]);
 
-  // Auto-scroll in text mode
   useEffect(() => {
     if (activeMode === 'text') messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, activeMode, isOpen]);
 
-  // Show "thinking" while AI is loading in voice mode
   useEffect(() => {
     if (activeMode === 'voice' && isLoading) setVoiceStatus('thinking');
   }, [isLoading, activeMode]);
@@ -65,11 +64,25 @@ export function ChatWidget() {
       .replace(/`[^`]+`/g, '')
       .trim();
 
+  /** Release previous audio object URL */
+  const freeAudioUrl = useCallback(() => {
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
+  }, []);
+
   // ─────────────────────────────────────────────
-  // TTS
+  // TTS — stop
   // ─────────────────────────────────────────────
 
   const stopSpeaking = useCallback(() => {
+    // Stop Gemini TTS audio element
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    // Also cancel Web Speech API (fallback)
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
@@ -77,19 +90,18 @@ export function ChatWidget() {
     setVoiceStatus('idle');
   }, []);
 
-  // Called in user gesture (voice tab click / mic button click) — unlocks iOS TTS
+  // Unlock Web Speech TTS in user gesture (iOS)
   const unlockTTS = useCallback(() => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
     if (ttsUnlockedRef.current) return;
     ttsUnlockedRef.current = true;
-    // Speak zero-width space silently — activates speechSynthesis for this tab
     const silent = new SpeechSynthesisUtterance('\u200B');
     silent.volume = 0;
     silent.rate = 10;
     window.speechSynthesis.speak(silent);
   }, []);
 
-  // Restart mic after TTS finishes (continuous conversation loop)
+  // Restart mic for continuous conversation
   const restartMic = useCallback(() => {
     const recognition = speechRecognitionRef.current;
     if (!recognition) return;
@@ -100,7 +112,6 @@ export function ChatWidget() {
 
     setVoiceTranscript('');
     setShowReplay(false);
-    // Sync lastSpoken so we don't re-speak the previous response
     lastSpokenIndexRef.current = messagesRef.current.filter(m => m.role === 'assistant').length - 1;
 
     try {
@@ -108,17 +119,19 @@ export function ChatWidget() {
       setIsRecording(true);
       setVoiceStatus('listening');
     } catch {
-      // Recognition might already be running
+      // already running — fine
     }
   }, []);
 
-  // Core TTS — cancel() first to unstick Chrome's speaking state
+  // ─────────────────────────────────────────────
+  // WEB SPEECH API FALLBACK TTS
+  // ─────────────────────────────────────────────
+
   const trySpeak = useCallback((text: string) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
     const clean = cleanForTTS(text);
     if (!clean) return;
 
-    // Cancel any stuck/previous speech (silent unlock utterance is done by now — it lasts <100ms)
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(clean);
@@ -127,40 +140,99 @@ export function ChatWidget() {
     utterance.pitch = 0.88;
     utterance.volume = 1.0;
 
-    // Use French voice if already loaded — otherwise browser uses default (fine)
     const voices = window.speechSynthesis.getVoices();
     const frVoice = voices.find(v => v.lang.startsWith('fr'));
     if (frVoice) utterance.voice = frVoice;
 
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      setVoiceStatus('speaking');
-      setShowReplay(false);
-    };
-
+    utterance.onstart = () => { setIsSpeaking(true); setVoiceStatus('speaking'); };
     utterance.onend = () => {
       setIsSpeaking(false);
       setVoiceStatus('idle');
       pendingTTSTextRef.current = null;
-      // Auto-restart mic: continuous conversation
       setTimeout(restartMic, 700);
     };
-
-    utterance.onerror = (e) => {
-      // On iOS without unlock: 'not-allowed'. On desktop: various.
-      console.warn('TTS error:', e.error, '— affichage bouton Réécouter');
+    utterance.onerror = () => {
       setIsSpeaking(false);
       setVoiceStatus('idle');
       pendingTTSTextRef.current = text;
-      setShowReplay(true); // Show Réécouter button (user gesture → TTS plays)
-      // Still restart mic so conversation doesn't die
+      setShowReplay(true);
       setTimeout(restartMic, 1000);
     };
 
     window.speechSynthesis.speak(utterance);
   }, [restartMic]);
 
-  // When AI response arrives in voice mode → play TTS
+  // ─────────────────────────────────────────────
+  // GEMINI TTS — primary (Charon male voice)
+  // ─────────────────────────────────────────────
+
+  const playGeminiTTS = useCallback(async (text: string) => {
+    const clean = cleanForTTS(text);
+    if (!clean) return;
+
+    setIsSpeaking(true);
+    setVoiceStatus('speaking');
+    setShowReplay(false);
+    freeAudioUrl();
+
+    // Start mic while AI speaks → ready for barge-in
+    const recognition = speechRecognitionRef.current;
+    if (recognition && shouldRestartRef.current && !isRecordingRef.current) {
+      try {
+        recognition.start();
+        setIsRecording(true);
+      } catch { /* already running */ }
+    }
+
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: clean }),
+      });
+
+      if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      audioUrlRef.current = url;
+
+      const audio = audioRef.current;
+      if (!audio) throw new Error('No audio element');
+
+      audio.src = url;
+      audio.onended = () => {
+        freeAudioUrl();
+        setIsSpeaking(false);
+        pendingTTSTextRef.current = null;
+        setShowReplay(false);
+        // Mic was already started for barge-in; if not recording, restart
+        if (shouldRestartRef.current && !isRecordingRef.current) {
+          setTimeout(restartMic, 400);
+        } else if (shouldRestartRef.current) {
+          setVoiceStatus('listening');
+        } else {
+          setVoiceStatus('idle');
+        }
+      };
+      audio.onerror = () => {
+        freeAudioUrl();
+        setIsSpeaking(false);
+        console.warn('Audio element error, falling back to Web Speech API');
+        trySpeak(clean);
+      };
+
+      await audio.play();
+    } catch (err) {
+      console.warn('Gemini TTS failed, falling back to Web Speech API:', err);
+      freeAudioUrl();
+      setIsSpeaking(false);
+      pendingTTSTextRef.current = text;
+      trySpeak(clean); // fallback
+    }
+  }, [freeAudioUrl, restartMic, trySpeak]);
+
+  // When AI response arrives in voice mode → speak it
   useEffect(() => {
     if (activeMode !== 'voice') return;
     const assistantMessages = messages.filter(m => m.role === 'assistant');
@@ -173,7 +245,7 @@ export function ChatWidget() {
       lastSpokenIndexRef.current = assistantMessages.length - 1;
       setVoiceResponse(lastMsg.content);
       setVoiceStatus('speaking');
-      trySpeak(lastMsg.content);
+      playGeminiTTS(lastMsg.content);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, isLoading, activeMode]);
@@ -191,7 +263,7 @@ export function ChatWidget() {
 
     const recognition = new SpeechRecognitionAPI();
     recognition.continuous = false;
-    recognition.interimResults = true; // Show words in real-time
+    recognition.interimResults = true;
     recognition.lang = 'fr-FR';
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -199,16 +271,26 @@ export function ChatWidget() {
       const lastResult = event.results[event.results.length - 1];
       const transcript = lastResult[0].transcript;
 
-      if (lastResult.isFinal) {
-        // Final result → submit to Gemini
+      if (!lastResult.isFinal) {
+        // ── BARGE-IN: user started speaking while AI is talking → stop audio ──
+        if (isSpeakingRef.current) {
+          if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+          }
+          if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) {
+            window.speechSynthesis.cancel();
+          }
+          setIsSpeaking(false);
+          setVoiceStatus('listening');
+        }
+        setVoiceTranscript(transcript + '…');
+      } else {
+        // Final result → send to Gemini
         setVoiceTranscript(transcript);
         setVoiceStatus('thinking');
         setIsRecording(false);
-        // Use append() — the correct programmatic API (no form input hack)
         append({ role: 'user', content: transcript });
-      } else {
-        // Interim — show live with ellipsis
-        setVoiceTranscript(transcript + '…');
       }
     };
 
@@ -221,7 +303,6 @@ export function ChatWidget() {
         setVoiceStatus('idle');
         alert('Accès au microphone refusé. Autorisez le micro dans les paramètres du navigateur.');
       } else if (err === 'no-speech') {
-        // Normal — user didn't speak. recognition.onend will restart.
         setIsRecording(false);
       } else if (err !== 'aborted') {
         console.error('Mic error:', err);
@@ -232,7 +313,7 @@ export function ChatWidget() {
 
     recognition.onend = () => {
       setIsRecording(false);
-      // Auto-restart if session is active and we're not thinking/speaking
+      // Auto-restart if session active, not thinking/speaking
       if (
         shouldRestartRef.current &&
         activeModeRef.current === 'voice' &&
@@ -246,7 +327,6 @@ export function ChatWidget() {
 
     speechRecognitionRef.current = recognition;
 
-    // Pre-load voices so they're available synchronously later
     if (window.speechSynthesis) window.speechSynthesis.getVoices();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -254,10 +334,18 @@ export function ChatWidget() {
   // VOICE MODE CONTROLS
   // ─────────────────────────────────────────────
 
-  // Auto-starts mic + unlocks TTS — called on "Appel Vocal" tab click
+  // Called on "Appel Vocal" tab click — user gesture context → unlock everything
   const startVoiceMode = useCallback(() => {
-    if (isRecordingRef.current) return; // already listening
-    unlockTTS(); // must be in this user gesture call stack
+    if (isRecordingRef.current) return;
+    unlockTTS();
+
+    // Unlock <audio> element for iOS (silent play → pause)
+    if (audioRef.current) {
+      const a = audioRef.current;
+      a.src = '';
+      a.play().then(() => { a.pause(); }).catch(() => {});
+    }
+
     shouldRestartRef.current = true;
     setVoiceTranscript('');
     setVoiceResponse('');
@@ -265,7 +353,7 @@ export function ChatWidget() {
     pendingTTSTextRef.current = null;
     lastSpokenIndexRef.current = messagesRef.current.filter(m => m.role === 'assistant').length - 1;
 
-    window.dispatchEvent(new Event('tikoun:mic-start')); // pause background music
+    window.dispatchEvent(new Event('tikoun:mic-start'));
 
     const recognition = speechRecognitionRef.current;
     if (!recognition) return;
@@ -278,15 +366,15 @@ export function ChatWidget() {
     }
   }, [unlockTTS]);
 
-  // Mic button: toggle recording / interrupt TTS
+  // Mic button: toggle / interrupt AI
   const toggleRecording = () => {
     const recognition = speechRecognitionRef.current;
     if (!recognition) {
       alert('Votre navigateur ne supporte pas la reconnaissance vocale. Essayez Chrome.');
       return;
     }
-    if (isSpeaking) stopSpeaking(); // interrupt AI if speaking
-    unlockTTS(); // keep TTS unlocked on each tap
+    if (isSpeaking) stopSpeaking();
+    unlockTTS();
 
     if (isRecording) {
       shouldRestartRef.current = false;
@@ -304,9 +392,7 @@ export function ChatWidget() {
         recognition.start();
         setIsRecording(true);
         setVoiceStatus('listening');
-      } catch {
-        // already started
-      }
+      } catch { /* already started */ }
     }
   };
 
@@ -318,22 +404,23 @@ export function ChatWidget() {
       try { recognition.stop(); } catch { /* ignore */ }
     }
     stopSpeaking();
+    freeAudioUrl();
     setIsRecording(false);
     setVoiceStatus('idle');
     setVoiceTranscript('');
     setVoiceResponse('');
     setShowReplay(false);
     pendingTTSTextRef.current = null;
-    window.dispatchEvent(new Event('tikoun:mic-end')); // resume background music
-  }, [stopSpeaking]);
+    window.dispatchEvent(new Event('tikoun:mic-end'));
+  }, [stopSpeaking, freeAudioUrl]);
 
-  // Réécouter — explicit user gesture → always works on iOS
+  // iOS fallback: tap to replay
   const replayLastResponse = () => {
     const text = pendingTTSTextRef.current || voiceResponse;
     if (!text) return;
     unlockTTS();
     setShowReplay(false);
-    setTimeout(() => trySpeak(text), 80);
+    setTimeout(() => playGeminiTTS(text), 80);
   };
 
   const statusLabel = {
@@ -349,6 +436,9 @@ export function ChatWidget() {
 
   return (
     <>
+      {/* Hidden audio element for Gemini TTS */}
+      <audio ref={audioRef} className="hidden" />
+
       {/* Floating trigger */}
       <motion.button
         onClick={() => setIsOpen(true)}
@@ -407,9 +497,7 @@ export function ChatWidget() {
                 <button
                   onClick={() => {
                     setActiveMode('voice');
-                    // startVoiceMode must run INSIDE this onClick (user gesture context)
-                    // to unlock TTS and start mic permission
-                    startVoiceMode();
+                    startVoiceMode(); // must be in onClick for iOS TTS + audio unlock
                   }}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm transition-all ${activeMode === 'voice' ? 'bg-tikoun-white/10 text-tikoun-gold font-medium shadow' : 'text-tikoun-white/50 hover:text-tikoun-white'}`}
                 >
@@ -579,7 +667,6 @@ export function ChatWidget() {
                             <Square className="w-3 h-3" /> Arrêter
                           </button>
                         )}
-                        {/* iOS fallback: tap to replay when TTS couldn't auto-play */}
                         {showReplay && voiceResponse && !isSpeaking && !isRecording && (
                           <button
                             onClick={replayLastResponse}
