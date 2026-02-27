@@ -97,25 +97,18 @@ export function ChatWidget() {
         recognition.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
           
-          // Interrupt TTS if speaking
-          if (typeof window !== 'undefined') {
-            window.speechSynthesis.cancel();
-            setIsSpeaking(false);
-          }
-          
           handleInputChangeRef.current({ target: { value: transcript } } as any);
           setTimeout(() => {
             handleSubmitRef.current({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>);
           }, 300);
+
           setIsRecording(false);
+          // Stay in voice mode so we can hear the TTS reply
         };
 
         recognition.onerror = (event: any) => {
-          console.error("Speech recognition error:", event.error);
-          // Don't reset on "no-speech" — user just didn't talk yet
-          if (event.error !== 'no-speech') {
-            setIsRecording(false);
-          }
+          console.error("Speech recognition error", event.error);
+          setIsRecording(false);
         };
 
         recognition.onend = () => {
@@ -126,10 +119,8 @@ export function ChatWidget() {
       }
 
       // Preload voices
-      if (window.speechSynthesis) {
+      if (typeof window.speechSynthesis !== 'undefined') {
         window.speechSynthesis.getVoices();
-        // Some browsers need this listener to load voices
-        window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
       }
     }
   }, []);
@@ -145,28 +136,10 @@ export function ChatWidget() {
       recognition.stop();
       setIsRecording(false);
     } else {
-      // Stop TTS first if speaking, with a small delay to avoid audio conflict
-      if (isSpeaking && typeof window !== 'undefined') {
-        window.speechSynthesis.cancel();
-        setIsSpeaking(false);
-      }
-      
-      try {
-        recognition.start();
-        setIsRecording(true);
-      } catch (e) {
-        console.error("Failed to start recognition:", e);
-        // May already be running, try stopping and restarting
-        try {
-          recognition.stop();
-          setTimeout(() => {
-            recognition.start();
-            setIsRecording(true);
-          }, 200);
-        } catch (e2) {
-          console.error("Second attempt failed:", e2);
-        }
-      }
+      // Stop AI voice if it was currently speaking to reply
+      stopSpeaking();
+      recognition.start();
+      setIsRecording(true);
     }
   };
 
