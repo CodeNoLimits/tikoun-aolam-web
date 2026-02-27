@@ -1,7 +1,7 @@
 "use client";
 
 import { useChat } from 'ai/react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Sparkles, Mic, Volume2, MicOff, MessageCircle } from 'lucide-react';
 
@@ -12,6 +12,14 @@ export function ChatWidget() {
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Use refs to always have latest handlers without re-triggering setup
+  const handleSubmitRef = useRef(handleSubmit);
+  const handleInputChangeRef = useRef(handleInputChange);
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit;
+    handleInputChangeRef.current = handleInputChange;
+  });
+
   const [speechRecognition, setSpeechRecognition] = useState<any>(null);
 
   useEffect(() => {
@@ -20,7 +28,7 @@ export function ChatWidget() {
     }
   }, [messages, activeMode, isOpen]);
 
-  // Initialize Speech Recognition
+  // Initialize Speech Recognition — run once only
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -28,21 +36,18 @@ export function ChatWidget() {
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
-        recognition.lang = 'fr-FR'; // User interacts mostly in French
+        recognition.lang = 'fr-FR';
 
         recognition.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
-          handleInputChange({ target: { value: transcript } } as any);
-          
-          // Submit immediately after receiving result
+          handleInputChangeRef.current({ target: { value: transcript } } as any);
+
           setTimeout(() => {
-             const formEvent = new Event('submit', { cancelable: true, bubbles: true });
-             // Mock form submit to ai/react hook
-             handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>);
+             handleSubmitRef.current({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>);
           }, 300);
 
           setIsRecording(false);
-          setActiveMode('text'); // Flip to text mode to see the response
+          setActiveMode('text');
         };
 
         recognition.onerror = (event: any) => {
@@ -57,7 +62,7 @@ export function ChatWidget() {
         setSpeechRecognition(recognition);
       }
     }
-  }, [handleSubmit, handleInputChange]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleRecording = () => {
     if (!speechRecognition) {
