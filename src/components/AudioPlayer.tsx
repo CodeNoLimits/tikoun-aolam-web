@@ -71,7 +71,7 @@ export function AudioPlayer() {
       {/* Positioned just above the chat widget button (bottom-24) */}
       <button
         onClick={toggle}
-        className="fixed bottom-40 right-5 md:right-8 z-[89] w-11 h-11 rounded-full bg-tikoun-black/80 backdrop-blur-md border border-tikoun-gold/30 text-tikoun-gold flex items-center justify-center hover:bg-tikoun-gold hover:text-tikoun-black transition-all shadow-lg shadow-tikoun-black/40"
+        className="fixed bottom-[120px] right-4 md:bottom-40 md:right-8 z-[89] w-10 h-10 md:w-11 md:h-11 rounded-full bg-tikoun-black/80 backdrop-blur-md border border-tikoun-gold/30 text-tikoun-gold flex items-center justify-center hover:bg-tikoun-gold hover:text-tikoun-black transition-all shadow-lg shadow-tikoun-black/40"
         aria-label={isPlaying ? "Couper la musique" : "Activer la musique"}
         title={isPlaying ? "Musique : ON" : "Musique : OFF"}
       >

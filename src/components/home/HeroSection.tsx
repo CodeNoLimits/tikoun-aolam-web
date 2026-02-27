@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 
 export function HeroSection() {
   return (
-    <section className="relative h-screen min-h-[800px] w-full flex items-center justify-center overflow-hidden bg-tikoun-black">
+    <section className="relative h-screen min-h-[600px] md:min-h-[800px] w-full flex items-center justify-center overflow-hidden bg-tikoun-black">
       {/* Background with slow zoom effect */}
       <motion.div
         className="absolute inset-0 z-0"
@@ -60,7 +60,7 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
-            className="relative z-10 font-serif text-5xl md:text-7xl lg:text-8xl font-bold text-tikoun-white leading-tight mb-8"
+            className="relative z-10 font-serif text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold text-tikoun-white leading-tight mb-8"
           >
             L'Élévation par <br /> 
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-tikoun-gold to-tikoun-copper italic">

@@ -49,7 +49,7 @@ export function BookShowcase() {
   const book = SHOWCASE_BOOKS[activeIndex];
 
   return (
-    <section className="py-24 bg-tikoun-black relative overflow-hidden">
+    <section className="py-12 md:py-16 lg:py-24 bg-tikoun-black relative overflow-hidden">
       {/* Book carousel video — 25% opacity */}
       <video
         autoPlay
@@ -66,7 +66,7 @@ export function BookShowcase() {
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex flex-col md:flex-row justify-between items-end mb-16">
           <div>
-            <h2 className="font-serif text-3xl md:text-5xl font-bold text-tikoun-white mb-4 uppercase tracking-wider">
+            <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-tikoun-white mb-4 uppercase tracking-wider">
               Ouvrages{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-tikoun-gold to-tikoun-copper italic">
                 Exceptionnels
@@ -100,11 +100,11 @@ export function BookShowcase() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="flex flex-col md:flex-row items-center gap-12 lg:gap-24 min-h-[400px]"
+            className="flex flex-col md:flex-row items-center gap-8 md:gap-12 lg:gap-24 min-h-[300px] md:min-h-[400px]"
           >
             {/* Book Image */}
             <div className="w-full md:w-1/2 flex justify-center">
-              <div className="relative w-[260px] h-[380px] md:w-[320px] md:h-[460px] shadow-2xl">
+              <div className="relative w-full max-w-[260px] md:max-w-[320px] aspect-[2/3] shadow-2xl mx-auto">
                 <div
                   className="w-full h-full bg-tikoun-darkgray bg-cover bg-center rounded-r-lg shadow-[inset_10px_0_20px_rgba(0,0,0,0.6)] border-l border-tikoun-white/10"
                   style={{ backgroundImage: `url('${book.image}')` }}
@@ -118,17 +118,17 @@ export function BookShowcase() {
               <span className="text-tikoun-gold text-sm font-bold tracking-widest uppercase mb-4">
                 {book.author}
               </span>
-              <h3 className="font-serif text-3xl md:text-4xl text-tikoun-white mb-6 leading-tight">
+              <h3 className="font-serif text-2xl sm:text-3xl md:text-4xl text-tikoun-white mb-4 md:mb-6 leading-tight">
                 {book.title}
               </h3>
-              <p className="text-tikoun-white/70 text-lg font-light leading-relaxed mb-8 max-w-lg">
+              <p className="text-tikoun-white/70 text-base md:text-lg font-light leading-relaxed mb-6 md:mb-8 max-w-lg">
                 {book.desc}
               </p>
-              <div className="flex items-center gap-6">
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full md:w-auto">
                 <span className="text-2xl font-medium text-tikoun-white">{convertPrice(book.price, currency).amount} {convertPrice(book.price, currency).symbol}</span>
                 <Link
                   href={`/produits/${book.id}`}
-                  className="bg-tikoun-white text-tikoun-black px-8 py-3 rounded text-sm font-bold tracking-widest uppercase hover:bg-tikoun-gold transition-colors"
+                  className="bg-tikoun-white text-tikoun-black px-8 py-3 rounded text-sm font-bold tracking-widest uppercase hover:bg-tikoun-gold transition-colors w-full sm:w-auto text-center"
                 >
                   Découvrir
                 </Link>

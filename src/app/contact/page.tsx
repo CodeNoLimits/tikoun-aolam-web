@@ -57,7 +57,7 @@ export default function ContactPage() {
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="group flex items-center gap-6 p-6 rounded-2xl border transition-all duration-300 cursor-pointer"
+            className="group flex items-center gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl border transition-all duration-300 cursor-pointer"
             style={{
               background: "linear-gradient(135deg, rgba(37,211,102,0.05), rgba(0,0,0,0))",
               borderColor: "rgba(37,211,102,0.2)",
@@ -69,7 +69,7 @@ export default function ContactPage() {
             }}
           >
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
               style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
             >
               <MessageCircle className="w-8 h-8" style={{ color: "#25D366" }} />
@@ -88,7 +88,7 @@ export default function ContactPage() {
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.35 }}
-            className="group flex items-center gap-6 p-6 rounded-2xl border transition-all duration-300 cursor-pointer"
+            className="group flex items-center gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl border transition-all duration-300 cursor-pointer"
             style={{
               background: "linear-gradient(135deg, rgba(212,175,55,0.05), rgba(0,0,0,0))",
               borderColor: "rgba(212,175,55,0.2)",
@@ -100,7 +100,7 @@ export default function ContactPage() {
             }}
           >
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
               style={{ background: "rgba(212,175,55,0.1)", border: "1px solid rgba(212,175,55,0.3)" }}
             >
               <Mail className="w-8 h-8 text-tikoun-gold" />
@@ -119,7 +119,7 @@ export default function ContactPage() {
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="group flex items-center gap-6 p-6 rounded-2xl border transition-all duration-300 cursor-pointer"
+            className="group flex items-center gap-4 sm:gap-6 p-4 sm:p-6 rounded-2xl border transition-all duration-300 cursor-pointer"
             style={{
               background: "linear-gradient(135deg, rgba(184,115,51,0.05), rgba(0,0,0,0))",
               borderColor: "rgba(184,115,51,0.2)",
@@ -131,7 +131,7 @@ export default function ContactPage() {
             }}
           >
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110"
               style={{ background: "rgba(184,115,51,0.1)", border: "1px solid rgba(184,115,51,0.3)" }}
             >
               <Phone className="w-8 h-8 text-tikoun-copper" />

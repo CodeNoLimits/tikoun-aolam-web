@@ -194,7 +194,7 @@ export default function CheckoutPage() {
             {/* Payment method selector */}
             <div className="mb-6">
               <label className="block text-xs text-tikoun-white/50 uppercase tracking-widest mb-3">Mode de paiement</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button
                   onClick={() => setPayMethod("whatsapp")}
                   className={`p-3 rounded-xl border text-center transition-all text-xs font-medium ${

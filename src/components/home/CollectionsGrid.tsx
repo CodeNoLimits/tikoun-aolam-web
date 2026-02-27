@@ -57,12 +57,12 @@ const CATEGORIES = [
 
 export function CollectionsGrid() {
   return (
-    <section className="py-24 bg-tikoun-black relative z-10">
+    <section className="py-12 md:py-16 lg:py-24 bg-tikoun-black relative z-10">
       <div className="container mx-auto px-4 md:px-8">
 
         <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-6">
           <div className="max-w-2xl">
-            <h2 className="font-serif text-3xl md:text-5xl font-bold text-tikoun-white mb-6 uppercase tracking-wider">
+            <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-tikoun-white mb-4 md:mb-6 uppercase tracking-wider">
               Explorez Nos<br/> <span className="text-tikoun-gold italic">Collections</span>
             </h2>
             <p className="text-tikoun-white/60 text-lg font-light leading-relaxed">
@@ -78,7 +78,7 @@ export function CollectionsGrid() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 auto-rows-[250px] md:auto-rows-[300px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 auto-rows-[180px] sm:auto-rows-[200px] md:auto-rows-[250px] lg:auto-rows-[300px]">
           {CATEGORIES.map((cat, i) => (
             <motion.div
               key={cat.title}

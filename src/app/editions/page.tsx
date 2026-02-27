@@ -61,7 +61,7 @@ export default function EditionsPage() {
           <span className="text-tikoun-gold tracking-[0.3em] text-xs uppercase font-medium mb-6 block">
             Découvrez notre histoire
           </span>
-          <h1 className="font-serif text-5xl md:text-7xl font-bold text-tikoun-white mb-6">
+          <h1 className="font-serif text-3xl sm:text-5xl md:text-7xl font-bold text-tikoun-white mb-6">
             Les Éditions{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-tikoun-gold to-tikoun-copper italic">
               Tikoun Aolam
@@ -86,9 +86,9 @@ export default function EditionsPage() {
           {STATS.map((s) => (
             <div
               key={s.label}
-              className="bg-tikoun-white/5 border border-tikoun-white/10 rounded-2xl p-8 text-center"
+              className="bg-tikoun-white/5 border border-tikoun-white/10 rounded-2xl p-4 sm:p-8 text-center"
             >
-              <div className="font-serif text-4xl font-bold text-tikoun-gold mb-2">{s.value}</div>
+              <div className="font-serif text-2xl sm:text-4xl font-bold text-tikoun-gold mb-2">{s.value}</div>
               <div className="text-tikoun-white/50 text-sm tracking-widest uppercase">{s.label}</div>
             </div>
           ))}
@@ -129,7 +129,7 @@ export default function EditionsPage() {
                   scale: 1.01,
                   boxShadow: "0 20px 60px rgba(212,175,55,0.12), 0 8px 20px rgba(0,0,0,0.4)",
                 }}
-                className="flex gap-8 items-start p-8 rounded-2xl border cursor-default transition-colors duration-300"
+                className="flex flex-col sm:flex-row gap-5 sm:gap-8 items-start p-5 sm:p-8 rounded-2xl border cursor-default transition-colors duration-300"
                 style={{
                   background: "linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))",
                   borderColor: "rgba(255,255,255,0.08)",

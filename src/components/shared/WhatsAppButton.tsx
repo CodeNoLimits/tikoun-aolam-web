@@ -1,15 +1,29 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function WhatsAppButton() {
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      setHidden((e as CustomEvent).detail === true);
+    };
+    window.addEventListener('tikoun:chat-open', handler);
+    return () => window.removeEventListener('tikoun:chat-open', handler);
+  }, []);
+
+  if (hidden) return null;
+
   return (
     <motion.a
       href="https://wa.me/972559759155"
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 bg-[#25D366] text-white rounded-full shadow-2xl hover:bg-[#20bd5a] transition-colors group"
+      aria-label="Contacter via WhatsApp"
+      className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 flex items-center justify-center w-12 h-12 md:w-14 md:h-14 bg-[#25D366] text-white rounded-full shadow-2xl hover:bg-[#20bd5a] transition-colors group"
       initial={{ scale: 0, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ delay: 1, type: "spring", stiffness: 200, damping: 20 }}

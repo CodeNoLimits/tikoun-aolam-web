@@ -35,7 +35,7 @@ export function Header() {
 
   return (
     <header
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 w-full max-w-[100vw] z-50 transition-all duration-300 ${
         isScrolled
           ? "bg-tikoun-black/85 backdrop-blur-md border-b border-tikoun-white/10 py-3"
           : "bg-transparent py-5"
@@ -105,7 +105,7 @@ export function Header() {
 
           {/* Right Actions */}
           <div className="hidden lg:flex items-center space-x-6">
-            <button className="hover:text-tikoun-gold transition-colors">
+            <button aria-label="Rechercher" className="hover:text-tikoun-gold transition-colors">
               <Search className="w-5 h-5" />
             </button>
             <div className="flex items-center bg-tikoun-white/5 rounded-full px-3 py-1 border border-tikoun-white/10 focus-within:border-tikoun-gold transition-colors">
@@ -120,7 +120,7 @@ export function Header() {
                </select>
                <ChevronDown className="w-3 h-3 text-tikoun-white/50 pointer-events-none" />
             </div>
-            <button className="relative group p-2" onClick={() => setCartOpen(true)}>
+            <button aria-label={`Panier (${itemCount} articles)`} className="relative group p-2" onClick={() => setCartOpen(true)}>
               <ShoppingBag className="w-5 h-5 group-hover:text-tikoun-gold transition-colors" />
               {itemCount > 0 && (
                 <span className="absolute top-0 right-0 w-4 h-4 bg-tikoun-gold text-tikoun-black text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -132,7 +132,7 @@ export function Header() {
 
           {/* Mobile Menu Toggle */}
           <div className="flex items-center gap-4 lg:hidden">
-            <button className="relative group p-2" onClick={() => setCartOpen(true)}>
+            <button aria-label={`Panier (${itemCount} articles)`} className="relative group p-2" onClick={() => setCartOpen(true)}>
               <ShoppingBag className="w-6 h-6 group-hover:text-tikoun-gold transition-colors" />
               {itemCount > 0 && (
                 <span className="absolute top-0 right-0 w-4 h-4 bg-tikoun-gold text-tikoun-black text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -140,7 +140,8 @@ export function Header() {
                 </span>
               )}
             </button>
-            <button 
+            <button
+              aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
               className="text-tikoun-white p-2"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -171,6 +172,14 @@ export function Header() {
               </div>
               <Link href="/blog" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-tikoun-gold">Notre Blog</Link>
               <Link href="/editions" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-tikoun-gold">Nos Éditions</Link>
+              <div className="space-y-3">
+                <span className="text-sm text-tikoun-white/50 uppercase tracking-widest">Nos Maîtres</span>
+                <div className="flex flex-col gap-2 pl-4 border-l border-tikoun-white/10">
+                  <Link href="/maitres/rabbi-nahman" onClick={() => setMobileMenuOpen(false)} className="text-sm hover:text-tikoun-gold">Rabbi Na&apos;hman</Link>
+                  <Link href="/maitres/rabbi-israel-ber-odesser" onClick={() => setMobileMenuOpen(false)} className="text-sm hover:text-tikoun-gold">Rabbi Israël Ber Odesser</Link>
+                  <Link href="/hiloula-de-rabbi-israel-ber-odesser" onClick={() => setMobileMenuOpen(false)} className="text-sm hover:text-tikoun-gold">Hiloula du Saba</Link>
+                </div>
+              </div>
               <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium hover:text-tikoun-gold">Contact</Link>
 
               {/* Mobile currency selector */}

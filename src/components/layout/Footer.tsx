@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Facebook, Instagram, Youtube, Send } from "lucide-react";
 
 export function Footer() {
@@ -11,15 +10,8 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
           {/* Brand Column */}
           <div className="space-y-6">
-            <Link href="/" className="flex items-center gap-3 group">
-              <Image
-                src="/logo.png"
-                alt="Logo Tikoun Aolam"
-                width={48}
-                height={48}
-                className="object-contain drop-shadow-[0_0_8px_rgba(212,175,55,0.35)] group-hover:drop-shadow-[0_0_14px_rgba(212,175,55,0.6)] transition-all"
-              />
-              <span className="font-cinzel text-2xl font-bold tracking-widest uppercase">
+            <Link href="/" className="group">
+              <span className="font-cinzel text-2xl font-bold tracking-widest uppercase group-hover:text-tikoun-gold transition-colors">
                 Tikoun <span className="text-tikoun-gold">Aolam</span>
               </span>
             </Link>
@@ -27,13 +19,13 @@ export function Footer() {
               Éditeur de référence des enseignements de Rabbi Na'hman de Breslev et Rabbi Israël Ber Odesser, avec une traduction française de la plus haute qualité.
             </p>
             <div className="flex items-center space-x-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-tikoun-white/5 border border-tikoun-white/10 flex items-center justify-center hover:bg-tikoun-gold hover:text-tikoun-black transition-all">
+              <a href="https://www.facebook.com/TikounAolam" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-11 h-11 rounded-full bg-tikoun-white/5 border border-tikoun-white/10 flex items-center justify-center hover:bg-tikoun-gold hover:text-tikoun-black transition-all">
                 <Facebook className="w-4 h-4" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-tikoun-white/5 border border-tikoun-white/10 flex items-center justify-center hover:bg-tikoun-gold hover:text-tikoun-black transition-all">
+              <a href="https://www.instagram.com/tikounaolam" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-11 h-11 rounded-full bg-tikoun-white/5 border border-tikoun-white/10 flex items-center justify-center hover:bg-tikoun-gold hover:text-tikoun-black transition-all">
                 <Instagram className="w-4 h-4" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-tikoun-white/5 border border-tikoun-white/10 flex items-center justify-center hover:bg-tikoun-gold hover:text-tikoun-black transition-all">
+              <a href="https://www.youtube.com/@TikounAolam" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="w-11 h-11 rounded-full bg-tikoun-white/5 border border-tikoun-white/10 flex items-center justify-center hover:bg-tikoun-gold hover:text-tikoun-black transition-all">
                 <Youtube className="w-4 h-4" />
               </a>
             </div>
@@ -71,18 +63,20 @@ export function Footer() {
             <p className="text-tikoun-white/60 text-sm mb-4">
               Inscrivez-vous pour recevoir nos dernières publications et offres exclusives.
             </p>
-            <form className="relative mt-2" onSubmit={(e) => e.preventDefault()}>
-              <input 
-                type="email" 
-                placeholder="Votre adresse email" 
+            <form className="mt-2 flex flex-col sm:flex-row gap-2 sm:gap-0 sm:relative" onSubmit={(e) => e.preventDefault()}>
+              <input
+                type="email"
+                placeholder="Votre adresse email"
                 className="w-full bg-tikoun-white/5 border border-tikoun-white/10 rounded-lg px-4 py-3 text-sm text-tikoun-white focus:outline-none focus:border-tikoun-gold transition-colors"
                 required
               />
-              <button 
-                type="submit" 
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-tikoun-gold text-tikoun-black rounded-md hover:bg-white transition-colors"
+              <button
+                type="submit"
+                aria-label="S'inscrire à la newsletter"
+                className="sm:absolute sm:right-2 sm:top-1/2 sm:-translate-y-1/2 p-3 sm:p-2 bg-tikoun-gold text-tikoun-black rounded-lg sm:rounded-md hover:bg-white transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
               >
                 <Send className="w-4 h-4" />
+                <span className="sm:hidden">S&apos;inscrire</span>
               </button>
             </form>
           </div>

@@ -16,6 +16,14 @@ function detectMobile(): boolean {
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
+/** Broadcast chat open/close so sibling components (WhatsAppButton) can react */
+function BroadcastChatOpen({ isOpen }: { isOpen: boolean }) {
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('tikoun:chat-open', { detail: isOpen }));
+  }, [isOpen]);
+  return null;
+}
+
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeMode, setActiveMode] = useState<'text' | 'voice'>('text');
@@ -25,6 +33,7 @@ export function ChatWidget() {
   const [voiceResponse, setVoiceResponse] = useState('');
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
   const [showReplay, setShowReplay] = useState(false);
+  const [hasSpeechRecognition, setHasSpeechRecognition] = useState(false);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, append } = useChat();
 
@@ -53,9 +62,14 @@ export function ChatWidget() {
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { voiceStatusRef.current = voiceStatus; }, [voiceStatus]);
 
-  // Detect mobile once on mount
+  // Detect mobile + SpeechRecognition once on mount
   useEffect(() => {
     isMobileRef.current = detectMobile();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    if (w.SpeechRecognition || w.webkitSpeechRecognition) {
+      setHasSpeechRecognition(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -501,6 +515,19 @@ export function ChatWidget() {
     window.dispatchEvent(new Event('tikoun:mic-end'));
   }, [stopSpeaking, freeAudioUrl]);
 
+  // Escape key closes panel
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        endConversation();
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, endConversation]);
+
   // iOS fallback: tap to replay
   const replayLastResponse = () => {
     const text = pendingTTSTextRef.current || voiceResponse;
@@ -526,13 +553,16 @@ export function ChatWidget() {
       {/* Hidden audio element for Gemini TTS — playsInline prevents iOS fullscreen */}
       <audio ref={audioRef} playsInline className="hidden" />
 
+      {/* Broadcast open/close state so WhatsAppButton can hide */}
+      <BroadcastChatOpen isOpen={isOpen} />
+
       {/* Floating trigger */}
       <motion.button
         onClick={() => setIsOpen(true)}
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1, y: isOpen ? 100 : 0 }}
         transition={{ type: 'spring', stiffness: 260, damping: 20, delay: 1 }}
-        className={`fixed bottom-24 right-5 md:right-8 z-[90] w-14 h-14 bg-tikoun-copper text-tikoun-white rounded-full flex items-center justify-center shadow-2xl shadow-tikoun-copper/20 hover:scale-110 active:scale-95 transition-transform ${isOpen ? 'pointer-events-none' : ''}`}
+        className={`fixed bottom-[68px] right-4 md:bottom-24 md:right-8 z-90 w-12 h-12 md:w-14 md:h-14 bg-tikoun-copper text-tikoun-white rounded-full flex items-center justify-center shadow-2xl shadow-tikoun-copper/20 hover:scale-110 active:scale-95 transition-transform ${isOpen ? 'pointer-events-none' : ''}`}
         aria-label="Ouvrir l'assistant IA"
       >
         <Sparkles className="w-6 h-6 absolute animate-pulse opacity-50 -top-1 -right-1 text-tikoun-gold" />
@@ -547,7 +577,7 @@ export function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-            className="fixed bottom-24 right-5 md:right-8 z-[100] w-[calc(100vw-40px)] md:w-[400px] h-[550px] max-h-[75vh] bg-tikoun-black border border-tikoun-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl"
+            className="fixed bottom-3 right-3 left-3 md:bottom-24 md:right-8 md:left-auto z-[100] w-auto md:w-[400px] h-[80dvh] md:h-[550px] max-h-[calc(100dvh-80px)] md:max-h-[75vh] bg-tikoun-black border border-tikoun-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden backdrop-blur-xl"
           >
             {/* ── Header ── */}
             <div className="bg-gradient-to-r from-tikoun-darkgray to-tikoun-black pt-4 px-4 border-b border-tikoun-white/10">
@@ -573,24 +603,28 @@ export function ChatWidget() {
                 </button>
               </div>
 
-              {/* Mode tabs */}
-              <div className="flex w-full bg-tikoun-black/50 rounded-lg p-1 mb-3 border border-tikoun-white/5">
-                <button
-                  onClick={() => { stopSpeaking(); shouldRestartRef.current = false; setActiveMode('text'); }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm transition-all ${activeMode === 'text' ? 'bg-tikoun-white/10 text-tikoun-gold font-medium shadow' : 'text-tikoun-white/50 hover:text-tikoun-white'}`}
-                >
-                  <MessageCircle className="w-4 h-4" /> Chat
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveMode('voice');
-                    startVoiceMode(); // must be in onClick for iOS TTS + audio unlock
-                  }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm transition-all ${activeMode === 'voice' ? 'bg-tikoun-white/10 text-tikoun-gold font-medium shadow' : 'text-tikoun-white/50 hover:text-tikoun-white'}`}
-                >
-                  <Volume2 className="w-4 h-4" /> Appel Vocal
-                </button>
-              </div>
+              {/* Mode tabs — only show voice tab if browser supports SpeechRecognition */}
+              {hasSpeechRecognition ? (
+                <div className="flex w-full bg-tikoun-black/50 rounded-lg p-1 mb-3 border border-tikoun-white/5">
+                  <button
+                    onClick={() => { stopSpeaking(); shouldRestartRef.current = false; setActiveMode('text'); }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm transition-all ${activeMode === 'text' ? 'bg-tikoun-white/10 text-tikoun-gold font-medium shadow' : 'text-tikoun-white/50 hover:text-tikoun-white'}`}
+                  >
+                    <MessageCircle className="w-4 h-4" /> Chat
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveMode('voice');
+                      startVoiceMode(); // must be in onClick for iOS TTS + audio unlock
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm transition-all ${activeMode === 'voice' ? 'bg-tikoun-white/10 text-tikoun-gold font-medium shadow' : 'text-tikoun-white/50 hover:text-tikoun-white'}`}
+                  >
+                    <Volume2 className="w-4 h-4" /> Appel Vocal
+                  </button>
+                </div>
+              ) : (
+                <div className="mb-3" />
+              )}
             </div>
 
             {/* ── Content ── */}
