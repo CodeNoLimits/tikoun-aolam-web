@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display, Cinzel } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
@@ -8,6 +8,7 @@ import { ChatWidget } from "@/components/ai/ChatWidget";
 import { CartProvider } from "@/lib/cart-context";
 import { CurrencyProvider } from "@/lib/currency-context";
 import { AudioPlayer } from "@/components/AudioPlayer";
+import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -25,6 +26,13 @@ const cinzel = Cinzel({
   weight: ["400", "700", "900"],
 });
 
+export const viewport: Viewport = {
+  themeColor: '#d4af37',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export const metadata: Metadata = {
   title: {
     default: "Tikoun Aolam | Éditions Breslev",
@@ -40,6 +48,21 @@ export const metadata: Metadata = {
     "Likouté Moharan",
     "Torah",
   ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Tikoun Aolam',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  metadataBase: new URL('https://tikoun-aolam-web-rho.vercel.app'),
+  openGraph: {
+    type: 'website',
+    siteName: 'Tikoun Aolam',
+    title: 'Tikoun Aolam | Éditions Breslev',
+    description: "Boutique de livres Breslev en français et hébreu — Enseignements de Rabbi Na'hman",
+  },
 };
 
 export default function RootLayout({
@@ -60,6 +83,7 @@ export default function RootLayout({
             <WhatsAppButton />
             <ChatWidget />
             <AudioPlayer />
+            <PWAInstallBanner />
           </CartProvider>
         </CurrencyProvider>
       </body>

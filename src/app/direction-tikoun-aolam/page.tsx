@@ -117,14 +117,29 @@ export default function ProposalPage() {
 
         {/* Proposal Pricing */}
         <section className="mb-20">
-          <h2 className="font-serif text-3xl md:text-5xl text-center text-tikoun-white mb-12">Devis d&apos;Intervention</h2>
-          
+          <h2 className="font-serif text-3xl md:text-5xl text-center text-tikoun-white mb-4">Devis d&apos;Intervention</h2>
+
+          {/* Industry comparison badge */}
+          <div className="flex justify-center mb-10">
+            <div className="inline-flex items-center gap-4 bg-tikoun-white/5 border border-tikoun-white/10 rounded-full px-6 py-3 text-sm">
+              <span className="text-tikoun-white/50">Prix habituel dans l&apos;industrie :</span>
+              <span className="text-tikoun-white/40 line-through font-medium">8 000 ₪</span>
+              <span className="text-tikoun-white/30">→</span>
+              <span className="text-tikoun-gold font-bold">Notre prix : 6 000 ₪</span>
+              <span className="bg-tikoun-gold text-tikoun-black text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">-25%</span>
+            </div>
+          </div>
+
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Card 1 */}
             <div className="bg-tikoun-black border border-tikoun-white/10 rounded-2xl p-8 hover:border-tikoun-white/30 transition-all flex flex-col">
               <h3 className="text-xl font-bold text-tikoun-white mb-2">Refonte V2</h3>
               <p className="text-tikoun-white/50 text-sm mb-6 flex-grow">Création unique &quot;State of the Art&quot;, intégration IA, tunnel Stripe/PayPal, optimisation mobile absolue.</p>
               <div className="mb-6">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-tikoun-white/30 text-sm line-through">8 000 ₪</span>
+                  <span className="text-tikoun-white/50 text-xs">tarif marché</span>
+                </div>
                 <span className="text-4xl font-serif text-tikoun-white">6 000</span>
                 <span className="text-tikoun-gold ml-2 font-medium">₪</span>
                 <span className="text-tikoun-white/40 text-xs block mt-1">Paiement unique</span>
@@ -153,24 +168,31 @@ export default function ProposalPage() {
               </ul>
             </div>
 
-            {/* Card 3 */}
+            {/* Card 3 — Promo Pack */}
             <div className="bg-gradient-to-br from-tikoun-gold/10 to-tikoun-copper/5 border border-tikoun-gold/40 rounded-2xl p-8 transform md:-translate-y-4 shadow-2xl flex flex-col relative overflow-hidden">
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-tikoun-gold to-tikoun-copper" />
               <div className="absolute top-4 right-4 bg-tikoun-gold text-tikoun-black text-[10px] uppercase tracking-widest px-2 py-1 font-bold rounded">
-                Recommandé
+                Meilleure Offre
               </div>
-              <h3 className="text-xl font-bold text-tikoun-white mb-2">Pack Croissance Absolue</h3>
-              <p className="text-tikoun-white/70 text-sm mb-6 flex-grow">La maintenance du site V2 + Une gestion offensive de vos réseaux sociaux avec production de vidéos professionnelles.</p>
+              <h3 className="text-xl font-bold text-tikoun-white mb-2">Pack Social Media + Maintenance</h3>
+              <p className="text-tikoun-white/70 text-sm mb-4 flex-grow">
+                Prenez ce pack mensuel et bénéficiez de la <strong className="text-tikoun-gold">refonte V2 en promotion</strong> : site professionnel + gestion réseaux sociaux + vidéos.
+              </p>
+              <div className="bg-tikoun-black/40 rounded-xl p-3 mb-4 border border-tikoun-gold/20">
+                <p className="text-tikoun-gold text-xs font-bold uppercase tracking-widest mb-1">🎁 Offre Promo</p>
+                <p className="text-tikoun-white/80 text-xs">Refonte V2 incluse à prix réduit si engagement mensuel</p>
+              </div>
               <div className="mb-6">
                 <span className="text-4xl font-serif text-tikoun-gold">3 000</span>
                 <span className="text-tikoun-white/80 ml-2 font-medium">₪ / mois</span>
-                <span className="text-tikoun-white/40 text-xs block mt-1 line-through">Au lieu de 3 100 ₪ (2600 + 500)</span>
+                <span className="text-tikoun-white/40 text-xs block mt-1">Social media + maintenance + IA inclus</span>
               </div>
               <ul className="space-y-3 text-sm text-tikoun-white/80">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0" /> Inclus : <strong>Maintenance Site V2</strong></li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0" /> Refonte V2 en <strong className="text-tikoun-gold">tarif promo</strong></li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0" /> Maintenance + Hébergement</li>
                 <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0" /> Gestion Réseaux Sociaux</li>
                 <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-tikoun-gold shrink-0" /> Création Vidéos Professionnelles</li>
-                <li className="flex items-center gap-2"><Zap className="w-4 h-4 text-tikoun-gold shrink-0" /> Boost de l&apos;acquisition client</li>
+                <li className="flex items-center gap-2"><Zap className="w-4 h-4 text-tikoun-gold shrink-0" /> Boost acquisition + Agent IA Vocal</li>
               </ul>
             </div>
           </div>
