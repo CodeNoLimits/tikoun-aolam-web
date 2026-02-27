@@ -56,12 +56,26 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  metadataBase: new URL('https://tikoun-aolam-web-rho.vercel.app'),
+  metadataBase: new URL('https://tikoun-aolam.vercel.app'),
   openGraph: {
     type: 'website',
     siteName: 'Tikoun Aolam',
     title: 'Tikoun Aolam | Éditions Breslev',
     description: "Boutique de livres Breslev en français et hébreu — Enseignements de Rabbi Na'hman",
+    locale: 'fr_FR',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Tikoun Aolam | Éditions Breslev',
+    description: "Boutique de livres Breslev en français et hébreu — Enseignements de Rabbi Na'hman",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+  },
+  alternates: {
+    canonical: 'https://tikoun-aolam.vercel.app',
   },
 };
 
@@ -72,6 +86,33 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className="dark scroll-smooth">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Éditions Tikoun Aolam",
+              url: "https://tikoun-aolam.vercel.app",
+              logo: "https://tikoun-aolam.vercel.app/logo-flame.png",
+              description:
+                "Maison d'édition spécialisée dans les enseignements de Rabbi Na'hman de Breslev traduits en français.",
+              sameAs: [
+                "https://www.facebook.com/TikounAolam",
+                "https://www.instagram.com/tikounaolam",
+                "https://www.youtube.com/@TikounAolam",
+              ],
+              contactPoint: {
+                "@type": "ContactPoint",
+                telephone: "+972-55-975-9155",
+                contactType: "customer service",
+                availableLanguage: ["French", "Hebrew"],
+              },
+            }),
+          }}
+        />
+      </head>
       <body
         className={`${inter.variable} ${playfair.variable} ${cinzel.variable} antialiased bg-tikoun-black text-tikoun-white selection:bg-tikoun-gold/20 selection:text-tikoun-gold min-h-screen flex flex-col`}
       >
