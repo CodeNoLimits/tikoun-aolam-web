@@ -521,7 +521,7 @@ export default function ProposalPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
-                href="https://calendly.com/dreamnovaultimate/tikoun-aolam"
+                href="https://wa.me/972584921492"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-3 bg-tikoun-gold text-tikoun-black font-bold px-10 py-4 rounded-full text-lg hover:bg-white transition-colors shadow-2xl shadow-tikoun-gold/20 group"
