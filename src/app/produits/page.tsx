@@ -58,14 +58,14 @@ function ShopContent() {
         muted
         loop
         playsInline
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        className="absolute inset-0 w-full h-full object-contain object-top md:object-cover md:object-center pointer-events-none"
         style={{ opacity: 0.20, zIndex: 0 }}
       >
         <source src="/videos/book-carousel.mp4" type="video/mp4" />
       </video>
 
       {/* Page Header */}
-      <div className="relative z-10 bg-tikoun-white/5 border-b border-tikoun-white/10 py-16 mb-12 backdrop-blur-sm">
+      <div className="relative z-10 border-b border-tikoun-white/10 py-16 mb-12">
         <div className="container mx-auto px-4 md:px-8 text-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
