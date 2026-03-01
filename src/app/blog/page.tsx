@@ -129,7 +129,7 @@ export default function BlogPage() {
         muted
         loop
         playsInline
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        className="absolute inset-0 w-full h-full object-contain object-top md:object-cover md:object-center pointer-events-none"
         style={{ opacity: 0.10, zIndex: 0 }}
       >
         <source src="/videos/books-presentation.mp4" type="video/mp4" />

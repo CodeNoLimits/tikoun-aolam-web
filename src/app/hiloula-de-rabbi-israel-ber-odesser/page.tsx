@@ -11,7 +11,7 @@ export default function HiloulaPage() {
       {/* Book glow video background */}
       <video
         autoPlay muted loop playsInline
-        className="fixed inset-0 w-full h-full object-cover pointer-events-none"
+        className="fixed inset-0 w-full h-full object-contain object-top md:object-cover md:object-center pointer-events-none"
         style={{ opacity: 0.2, zIndex: 0 }}
       >
         <source src="/videos/book-glow.mp4" type="video/mp4" />
